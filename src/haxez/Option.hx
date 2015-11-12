@@ -10,7 +10,6 @@ typedef OptionCata<A, B> = {
     function None() : B;
 }
 
-@:noStack
 class Options {
 
     @:noUsing
@@ -49,5 +48,24 @@ class Options {
             C.identity(),
             C.constant0(x)
         );
+    }
+
+    public static inline function chain<A, B>(opt : Option<A>, f : A -> Option<B>) : Option<B> {
+        return opt.fold(
+            function(x : A) : Option<B> return f(x),
+            C.constant0(Option.None)
+        );
+    }
+
+    public static inline function map<A, B>(opt : Option<A>, f : A -> B) : Option<B> {
+        return opt.chain(function(a : A) : Option<B> {
+            return Options.of(f(a));
+        });
+    }
+
+    public static inline function ap<A, B>(opt : Option<A -> B>, a : Option<A>) : Option<B> {
+        return opt.chain(function(f : A -> B) : Option<B> {
+            return a.map(f);
+        });
     }
 }

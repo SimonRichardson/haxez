@@ -6,9 +6,7 @@ using haxez.Option;
 
 class Example {
     static function main() {
-        Sys.println(Some(1).cata({
-            Some: function(a : Int) : Option<String> return None,
-            None: function() : Option<String> return Some("B")
-        }).getOrElse("C"));
+        var f = function(a : Int) : Int return a + 1;
+        Sys.println(Some(f).ap(Some(1)));
     }
 }
