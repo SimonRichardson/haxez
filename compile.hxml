@@ -1,7 +1,0 @@
-# Neko
-
--cp src
--neko example.n
--main Example
--cmd neko example.n
-
