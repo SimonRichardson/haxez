@@ -25,7 +25,7 @@ class Options {
     public static function cata<A, B>(opt : Option<A>, cat : OptionCata<A, B>) : B {
         return switch(opt) {
             case Some(v): cat.Some(v);
-            case _: cat.None();
+            case None: cat.None();
         }
     }
 
