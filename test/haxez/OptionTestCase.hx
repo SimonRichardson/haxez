@@ -1,6 +1,7 @@
 package haxez;
 
 import haxez.Combinators as C;
+import haxez.check.Arb;
 import haxez.check.adapters.HaxeUnitTestCase;
 
 using haxez.Option;
@@ -16,9 +17,26 @@ class OptionTestCase extends HaxeUnitTestCase {
         this.env = env;
     }
 
-    public function test_map() {
+    public function test_Functor_identity() {
         assert(env.forAll(
-            function(a : String) : Bool return equals(Options.of(a).map(C.identity()), Options.of(a)),
+            function(a : String) : Bool {
+                return equals(
+                    Options.of(a).map(C.identity()), 
+                    Options.of(a)
+                );
+            },
+            String
+        ));
+    }
+
+    public function test_Functor_composition() {
+        assert(env.forAll(
+            function(a : String) : Bool {
+                return equals(
+                    Options.of(a).map(C.compose(C.identity())(C.identity())), 
+                    Options.of(a).map(C.identity()).map(C.identity())
+                );
+            },
             String
         ));
     }

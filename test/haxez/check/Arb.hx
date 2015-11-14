@@ -5,8 +5,6 @@ using haxez.check.QuickCheck;
 typedef ArbType<A> = {
     function generate(env : QuickCheck, size : Int) : A;
     function shrink(a : A) : Array<A>;
-    function is<B>(a : Class<B>) : Bool;
-    function match<B>(a : B) : Bool;
 }
 
 class Arb {
@@ -47,14 +45,6 @@ class StringArb {
         }
         return accum;
     }
-
-    public function is<T>(a : Class<T>) : Bool {
-        return Type.getClassName(a) == "String";
-    }
-
-    public function match<T>(a : T) : Bool {
-        return Type.getClassName(Type.getClass(a)) == "String";
-    }
 }
 
 class IntArb {
@@ -77,13 +67,5 @@ class IntArb {
             }
         }
         return accum;
-    }
-
-    public function is<T>(a : Class<T>) : Bool {
-        return Type.getClassName(a) == "String";
-    }
-
-    public function match<T>(a : T) : Bool {
-        return Type.getClassName(Type.getClass(a)) == "String";
     }
 }

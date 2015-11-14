@@ -9,8 +9,7 @@ using haxez.check.QuickCheck;
 class Test {
     public static function main() {
         var env = Env(100, [
-            Arb.String,
-            Arb.Int
+            Arb.String => String
         ]);
 
         var runner = new TestRunner();
