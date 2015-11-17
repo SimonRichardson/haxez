@@ -19,13 +19,13 @@ class OptionTestCase extends HaxeUnitTestCase {
 
     public function test_Functor_identity() {
         assert(env.forAll(
-            function(a : String) : Bool {
+            function(a : Int) : Bool {
                 return equals(
                     Options.of(a).map(C.identity()), 
                     Options.of(a)
                 );
             },
-            String
+            Int
         ));
     }
 

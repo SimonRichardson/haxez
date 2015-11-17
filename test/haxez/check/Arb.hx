@@ -2,70 +2,90 @@ package haxez.check;
 
 using haxez.check.QuickCheck;
 
-typedef ArbType<A> = {
-    function generate(env : QuickCheck, size : Int) : A;
-    function shrink(a : A) : Array<A>;
-}
-
 class Arb {
 
-    public static var String : ArbType<String> = new StringArb();
+    public static function addInt(env : QuickCheck) : QuickCheck {
+        return ArbInt.add(env);
+    }
 
-    public static var Int : ArbType<Int> = new IntArb();
+    public static function addString(env : QuickCheck) : QuickCheck {
+        return ArbString.add(env);
+    }
+}
+
+class ArbInt {
+
+    public static inline function add(env : QuickCheck) : QuickCheck {
+        return env.method("arb", Helpers.strictEquals(Int), function(args : Array<Dynamic>) : Dynamic {
+            var variance = Math.floor(Math.pow(2, 32) / env.goal());
+            return Rnd.randomRange(-variance, variance);
+        })
+        .method("shrink", Helpers.isInt(), function(args : Array<Dynamic>) : Dynamic {
+            var a = cast(args[1], Int);
+            var accum = [0];
+            var x = a;
+
+            while(x > 0) {
+                x = Math.floor(x / 2);
+                if(x > 0) {
+                    accum.push(a - x);
+                }
+            }
+            return accum;
+        });
+    }
+}
+
+class ArbString {
+
+    public static inline function add(env : QuickCheck) : QuickCheck {
+        return env.method("arb", Helpers.strictEquals(String), function(args : Array<Dynamic>) : Dynamic {
+            var accum = [];
+            var length = Rnd.randomRange(0, cast(args[1], Int));
+            for(i in 0...length) {
+                accum.push(String.fromCharCode(Math.floor(Rnd.randomRange(32, 126))));
+            }
+            return accum.join("");
+        })
+        .method("shrink", Helpers.isString(), function(args : Array<Dynamic>) : Dynamic {
+            var accum = [""];
+            var str = cast(args[1], String);
+            var x = str.length;
+
+            while(x > 0) {
+                x = Math.floor(x / 2);
+                if(x > 0) {
+                    accum.push(str.substr(0, str.length - x));
+                }
+            }
+            return accum;
+        });
+    }
+}
+
+private class Helpers {
+
+    public static function strictEquals<A, B>(x : A) : Array<B> -> Bool {
+        return function(y : Array<B>) : Bool {
+            return cast y[0] == cast x;
+        };
+    }
+
+    public static function isString<A>() : Array<A> -> Bool {
+        return function(x : Array<A>) : Bool {
+            return Std.is(x[0], String);
+        };
+    }
+
+    public static function isInt<A>() : Array<A> -> Bool {
+        return function(x : Array<A>) : Bool {
+            return Std.is(x[0], Int);
+        };
+    }
 }
 
 private class Rnd {
     public static function randomRange(a : Int, b : Int) : Int {
         return Math.floor(Math.random() * (b - a) + a);
-    }
-}
-
-class StringArb {
-
-    public function new() {}
-    
-    public function generate(env : QuickCheck, size : Int) : String {
-        var accum = [];
-        var length = Rnd.randomRange(0, size);
-        for(i in 0...length) {
-            accum.push(String.fromCharCode(Math.floor(Rnd.randomRange(32, 126))));
-        }
-        return accum.join("");
-    }
-    
-    public function shrink(a : String) : Array<String> {
-        var accum = [""];
-        var x = a.length;
-
-        while(x > 0) {
-            x = Math.floor(x / 2);
-            if(x > 0) {
-                accum.push(a.substr(0, a.length - x));
-            }
-        }
-        return accum;
-    }
-}
-
-class IntArb {
-
-    public function new() {}
-    
-    public function generate(env : QuickCheck, size : Int) : Int {
-        var variance = Math.floor(Math.pow(2, 53) / env.goal());
-        return Rnd.randomRange(-variance, variance);
-    }
-    
-    public function shrink(a : Int) : Array<Int> {
-        var accum = [0];
-        var x = a;
-
-        while(x > 0) {
-            x = Math.floor(x / 2);
-            if(x > 0) {
-                accum.push(a - x);
-            }
-        }
-        return accum;
     }
 }
