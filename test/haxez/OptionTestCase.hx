@@ -5,13 +5,14 @@ import haxez.check.Arb;
 import haxez.check.adapters.HaxeUnitTestCase;
 
 using haxez.Option;
+using haxez.check.Env;
 using haxez.check.QuickCheck;
 
 class OptionTestCase extends HaxeUnitTestCase {
 
-    private var env : QuickCheck;
+    private var env : Env;
 
-    public function new(env : QuickCheck) {
+    public function new(env : Env) {
         super();
 
         this.env = env;

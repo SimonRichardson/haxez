@@ -5,6 +5,7 @@ import haxe.unit.TestRunner;
 import haxez.OptionTestCase;
 
 using haxez.check.Arb;
+using haxez.check.Env;
 using haxez.check.QuickCheck;
 
 class Test {

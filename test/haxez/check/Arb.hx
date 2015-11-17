@@ -1,27 +1,28 @@
 package haxez.check;
 
+using haxez.check.Env;
 using haxez.check.QuickCheck;
 
 class Arb {
 
-    public static function addInt(env : QuickCheck) : QuickCheck {
+    public static function addInt(env : Env) : Env {
         return ArbInt.add(env);
     }
 
-    public static function addString(env : QuickCheck) : QuickCheck {
+    public static function addString(env : Env) : Env {
         return ArbString.add(env);
     }
 }
 
 class ArbInt {
 
-    public static inline function add(env : QuickCheck) : QuickCheck {
+    public static function add(env : Env) : Env {
         return env.method("arb", Helpers.strictEquals(Int), function(args : Array<Dynamic>) : Dynamic {
             var variance = Math.floor(Math.pow(2, 32) / env.goal());
             return Rnd.randomRange(-variance, variance);
         })
         .method("shrink", Helpers.isInt(), function(args : Array<Dynamic>) : Dynamic {
-            var a = cast(args[1], Int);
+            var a = cast(args[0], Int);
             var accum = [0];
             var x = a;
 
@@ -38,7 +39,7 @@ class ArbInt {
 
 class ArbString {
 
-    public static inline function add(env : QuickCheck) : QuickCheck {
+    public static function add(env : Env) : Env {
         return env.method("arb", Helpers.strictEquals(String), function(args : Array<Dynamic>) : Dynamic {
             var accum = [];
             var length = Rnd.randomRange(0, cast(args[1], Int));
@@ -49,7 +50,7 @@ class ArbString {
         })
         .method("shrink", Helpers.isString(), function(args : Array<Dynamic>) : Dynamic {
             var accum = [""];
-            var str = cast(args[1], String);
+            var str = cast(args[0], String);
             var x = str.length;
 
             while(x > 0) {
