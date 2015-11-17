@@ -1,70 +1,72 @@
 package haxez;
 
 import haxez.Combinators as C;
+import haxez.Types;
 
 using haxez.Option;
 
-typedef Option<T> = haxe.ds.Option<T>;
+typedef OptionType<T> = haxe.ds.Option<T>;
 typedef OptionCata<A, B> = {
     function Some(v : A) : B;
     function None() : B;
 }
 
-class Options {
+abstract Option<T>(OptionType<T>) from OptionType<T> to OptionType<T> {
 
-    @:noUsing
-    public static inline function of<T>(v : T) : Option<T> {
-        return Some(v);
+    inline function new(opt : OptionType<T>) {
+        this = opt;
     }
 
     @:noUsing
-    public static inline function empty<T>() : Option<T> {
-        return None;
-    }
+    public static inline function of<T>(v : T) : Option<T> return Some(v);
 
-    public static function cata<A, B>(opt : Option<A>, cat : OptionCata<A, B>) : B {
-        return switch(opt) {
+    @:noUsing
+    public static inline function empty<T>() : Option<T> return None;
+
+    public function cata<B>(cat : OptionCata<T, B>) : B {
+        return switch(this) {
             case Some(v): cat.Some(v);
             case None: cat.None();
         }
     }
 
-    public static inline function fold<A, B>(opt : Option<A>, f : A -> B, g : Void -> B) : B {
-        return opt.cata({
+    public inline function fold<B>(f : T -> B, g : Void -> B) : B {
+        return this.cata({
             Some: f, 
             None: g
         });
     }
 
-    public static inline function orElse<A, B>(opt : Option<A>, x : Option<B>) : Option<B> {
-        return opt.fold(
-            function(x : A) : Option<B> return cast Some(x),
+    public inline function orElse<B>(x : Option<B>) : Option<B> {
+        return this.fold(
+            function(x : T) : Option<B> return cast Some(x),
             C.constant0(x)
         );
     }
 
-    public static inline function getOrElse<A, B>(opt : Option<A>, x : A) : A {
-        return opt.fold(
+    public inline function getOrElse(x : T) : T {
+        return this.fold(
             C.identity(),
             C.constant0(x)
         );
     }
 
-    public static inline function chain<A, B>(opt : Option<A>, f : A -> Option<B>) : Option<B> {
-        return opt.fold(
-            function(x : A) : Option<B> return f(x),
-            C.constant0(Option.None)
+    public inline function chain<B>(f : T -> Option<B>) : Option<B> {
+        return this.fold(
+            function(x : T) : Option<B> return f(x),
+            C.constant0(Option.empty())
         );
     }
 
-    public static inline function map<A, B>(opt : Option<A>, f : A -> B) : Option<B> {
-        return opt.chain(function(a : A) : Option<B> {
-            return Options.of(f(a));
+    public inline function map<B>(f : T -> B) : Option<B> {
+        return this.chain(function(a : T) : Option<B> {
+            return Option.of(f(a));
         });
     }
 
-    public static inline function ap<A, B>(opt : Option<A -> B>, a : Option<A>) : Option<B> {
-        return opt.chain(function(f : A -> B) : Option<B> {
+    public inline function ap<B>(a : Option<T>) : Option<B> {
+        var opt : Option<T -> B> = cast this;
+        return opt.chain(function(f : T -> B) : Option<B> {
             return a.map(f);
         });
     }
