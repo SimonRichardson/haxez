@@ -1,5 +1,6 @@
 package haxez.check;
 
+import haxe.Constraints;
 import haxe.EnumTools;
 import haxe.ds.ObjectMap;
 import haxe.unit.TestCase;
@@ -21,13 +22,9 @@ class Reports {
     public static inline function tries<A>(rep : Report<A>) : Int return EnumValueTools.getParameters(rep)[1];
 }
 
-enum PropMethod<A, B> {
-    Method(predicate : A -> Bool, f : Array<Dynamic> -> B);
-}
-
 enum QuickCheck {
     Env(goal : Int);
-    Values(check : QuickCheck, values : Map<String, Array<PropMethod<Dynamic, Dynamic>>>);
+    Values(check : QuickCheck, values : Map<String, Array<PropMethod>>);
 }
 
 class QuickChecks {
@@ -39,14 +36,14 @@ class QuickChecks {
         };
     }
 
-    public static inline function values(env : QuickCheck) : Map<String, Array<PropMethod<Dynamic, Dynamic>>> {
+    public static inline function values(env : QuickCheck) : Map<String, Array<PropMethod>> {
         return switch (env) {
             case Env(_): new Map();
             case Values(x, y): Helpers.extend(Helpers.extend(new Map(), x.values()), y);
         }
     }
 
-    public static function method<A>(env : QuickCheck, name : String, predicate : Dynamic -> Bool, f : Array<Dynamic> -> A) : QuickCheck {
+    public static function method<A>(env : QuickCheck, name : String, predicate : Function, f : Function) : QuickCheck {
         var method = [Method(predicate, f)];
         return switch (env) {
             case Env(goal): Values(env, [name => method]);
@@ -84,7 +81,7 @@ class QuickChecks {
     }
 
     private static function call<A>(env : QuickCheck, name : String, args : Array<Dynamic>) : Option<A> {
-        return findRegistered(env, name, args).map(function(f : Array<Dynamic> -> A) : A {
+        return findRegistered(env, name, args).map(function(f : Function) : A {
             return f(args);
         });
     }
@@ -103,20 +100,24 @@ class QuickChecks {
         }).getOrElse([]);
     }
 
-    private static function findRegistered<A>(env : QuickCheck, name : String, args : Array<Dynamic>) : Option<Array<Dynamic> -> A> {
-        return Helpers.option(env.values().get(name)).chain(function(a : Array<PropMethod<Dynamic, Dynamic>>) : Option<Array<Dynamic> -> A> {
-            var possible = Helpers.option(a.find(function(a : PropMethod<Dynamic, Dynamic>) : Bool {
+    private static function findRegistered<A>(env : QuickCheck, name : String, args : Array<Dynamic>) : Option<Function> {
+        return Helpers.option(env.values().get(name)).chain(function(a : Array<PropMethod>) : Option<Function> {
+            var possible = Helpers.option(a.find(function(a : PropMethod) : Bool {
                 return switch (a) {
                     case Method(predicate, _): predicate(args);
                 };
             }));
-            return possible.map(function(a : PropMethod<Dynamic, Dynamic>) : Array<Dynamic> -> A {
+            return possible.map(function(a : PropMethod) : Function {
                 return switch (a) {
                     case Method(_, f): f; 
                 };
             });
         });
     }
+}
+
+private enum PropMethod {
+    Method(predicate : Function, f : Function);
 }
 
 private class Helpers {
