@@ -23,13 +23,12 @@ class OptionTestCase extends HaxeUnitTestCase {
     public function test_FunctorLaws<A>() {
         var functor = Functor.laws(this.env);
         assert(functor(
-            function(a : A) : F<A> {
-                return cast Option.of(a);
-            }, 
-            function(a : F<A>) : A {
-                var o : Option<A> = cast a;
-                return switch(o) {
-                    case Some(a): a;
+            function(a : A) : Option<A> {
+                return Option.of(a);
+            },
+            function(a : Option<A>) : A {
+                return switch(a) {
+                    case Some(b): b;
                     case _: throw "Invalid";
                 };
             }

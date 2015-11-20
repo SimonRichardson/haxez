@@ -58,8 +58,8 @@ abstract Option<T>(OptionType<T>) from OptionType<T> to OptionType<T> {
         );
     }
 
-    public inline function map<B>(f : T -> B) : Option<B> {
-        return this.chain(function(a : T) : Option<B> {
+    public inline function map<A>(f : T -> A) : Option<A> {
+        return this.chain(function(a : T) : Option<A> {
             return Option.of(f(a));
         });
     }
