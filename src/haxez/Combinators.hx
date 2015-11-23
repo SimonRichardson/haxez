@@ -2,10 +2,10 @@ package haxez;
 
 class Combinators {
 
-    public inline static function identity<A>() : A -> A {
-        return function(x : A) : A {
-            return x;
-        }
+    public inline static function apply<A, B>(f : A -> B) : (A -> B) {
+        return function(x : A) : B {
+            return f(x);
+        };
     }
 
     public inline static function compose<A, B, C>(f : B -> C) : (A -> B) -> (A -> C) {
@@ -26,5 +26,11 @@ class Combinators {
         return function(x :  A) : B {
             return v;
         };
+    }
+
+    public inline static function identity<A>() : A -> A {
+        return function(x : A) : A {
+            return x;
+        }
     }
 }

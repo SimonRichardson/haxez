@@ -3,7 +3,7 @@ package haxez.check;
 import haxe.Constraints;
 
 using Lambda;
-using haxez.Option;
+using haxez.Maybe;
 using haxez.check.Arb;
 using haxez.check.Env;
 using haxez.check.QuickCheck;
@@ -40,14 +40,14 @@ class Envs {
         }
     }
 
-    public static function call<A>(env : Env, name : String, args : Array<Dynamic>) : Option<A> {
+    public static function call<A>(env : Env, name : String, args : Array<Dynamic>) : Maybe<A> {
         return env.findRegistered(name, args).map(function(f : Function) : A {
             return f(args);
         });
     }
 
-    private static function findRegistered<A>(env : Env, name : String, args : Array<Dynamic>) : Option<Function> {
-        return Helpers.option(env.values().get(name)).chain(function(a : Array<PropMethod>) : Option<Function> {
+    private static function findRegistered<A>(env : Env, name : String, args : Array<Dynamic>) : Maybe<Function> {
+        return Helpers.option(env.values().get(name)).chain(function(a : Array<PropMethod>) : Maybe<Function> {
             var possible = Helpers.option(a.find(function(a : PropMethod) : Bool {
                 return switch (a) {
                     case Method(predicate, _): predicate(args);
@@ -68,7 +68,7 @@ private enum PropMethod {
 
 private class Helpers {
 
-    public static function option<A>(a : Null<A>) : Option<A> return a != null ? Some(a) : None;
+    public static function option<A>(a : Null<A>) : Maybe<A> return a != null ? Some(a) : None;
 
     public static function extend<K, V>(a : Map<K, V>, b : Map<K, V>) : Map<K, V> {
         for (i in b.keys()) a.set(i, b[i]);

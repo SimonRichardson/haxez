@@ -2,7 +2,7 @@ package haxez.check.adapters;
 
 import haxe.unit.TestCase;
 
-using haxez.Option;
+using haxez.Maybe;
 using haxez.check.QuickCheck;
 
 class HaxeUnitTestCase extends TestCase {
@@ -11,7 +11,7 @@ class HaxeUnitTestCase extends TestCase {
         super();
     }
 
-    public function assert<A>(x : Option<Report<A>>) : Void {
+    public function assert<A>(x : Maybe<Report<A>>) : Void {
         assertTrue(switch(x) {
             case Some(fail): 
                 print('- Failed after ${fail.tries()} tries: ${fail.input().toString()}\n');
