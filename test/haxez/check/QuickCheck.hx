@@ -6,7 +6,7 @@ import haxe.ds.ObjectMap;
 import haxe.unit.TestCase;
 
 using Lambda;
-using haxez.Option;
+using haxez.Maybe;
 using haxez.check.Arb;
 using haxez.check.Env;
 using haxez.check.QuickCheck;
@@ -34,12 +34,12 @@ class QuickCheck {
         this.env = env;
     }
 
-    public static function forAll<A, B>(env : Env, property : A -> Bool, type : Dynamic) : Option<Report<A>> {
+    public static function forAll<A, B>(env : Env, property : A -> Bool, type : Dynamic) : Maybe<Report<A>> {
         var check = new QuickCheck(env);
 
         for (i in 0...check.goal()) {
             var result = check.generateInput(type, i).chain(
-                function(input : A) : Option<Report<A>> {
+                function(input : A) : Maybe<Report<A>> {
                     if (!property(input)) {
                         return Some(Failure(
                             check.findSmallest(property, input),
@@ -62,7 +62,7 @@ class QuickCheck {
         return this.env.goal();
     }
 
-    private function generateInput<A, B>(type : Dynamic, size : Int) : Option<A> {
+    private function generateInput<A, B>(type : Dynamic, size : Int) : Maybe<A> {
         return this.env.call("arb", [type, size]);
     }
 
@@ -83,7 +83,7 @@ class QuickCheck {
 
 private class Helpers {
 
-    public static function isSome<A>(a : Option<A>) : Bool {
+    public static function isSome<A>(a : Maybe<A>) : Bool {
         return switch(a) { 
             case Some(_): true;
             case None: false;

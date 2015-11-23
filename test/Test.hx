@@ -2,7 +2,7 @@ package ;
 
 import haxe.ds.ObjectMap;
 import haxe.unit.TestRunner;
-import haxez.OptionTestCase;
+import haxez.MaybeTestCase;
 
 using haxez.check.Arb;
 using haxez.check.Env;
@@ -15,7 +15,7 @@ class Test {
             .addInt();
 
         var runner = new TestRunner();
-        runner.add(new OptionTestCase(env));
+        runner.add(new MaybeTestCase(env));
         runner.run();
     }
 }
