@@ -4,6 +4,7 @@ import haxez.Combinators as C;
 import haxez.Types.Functor as F;
 
 using haxez.Maybe;
+using haxez.check.Arb;
 using haxez.check.Env;
 using haxez.check.QuickCheck;
 using haxez.check.laws.Functor;
@@ -29,11 +30,11 @@ class Functor {
     }
 
     public static function law1<T>(env : Env, create : T -> F<T>, f : F<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(id(create, f), Int);
+        return env.forAll(id(create, f), AnyVal);
     }
 
     public static function law2<T>(env : Env, create : T -> F<T>, f : F<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(composition(create, f), Int);
+        return env.forAll(composition(create, f), AnyVal);
     }
 
     public static function laws<T>(env : Env) : (T -> F<T>) -> (F<T> -> T) -> Maybe<Report<T>> {

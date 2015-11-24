@@ -4,6 +4,7 @@ import haxez.Combinators as C;
 import haxez.Types.Applicative as A;
 
 using haxez.Maybe;
+using haxez.check.Arb;
 using haxez.check.Env;
 using haxez.check.QuickCheck;
 using haxez.check.laws.Applicative;
@@ -52,19 +53,19 @@ class Applicative {
     }
 
     public static function law1<T>(env : Env, type : Void -> A<T>, f : A<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(id(type, f), Int);
+        return env.forAll(id(type, f), AnyVal);
     }
 
     public static function law2<T>(env : Env, type : Void -> A<T>, f : A<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(composition(type, f), Int);
+        return env.forAll(composition(type, f), AnyVal);
     }
 
     public static function law3<T>(env : Env, type : Void -> A<T>, f : A<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(homomorphism(type, f), Int);
+        return env.forAll(homomorphism(type, f), AnyVal);
     }
 
     public static function law4<T>(env : Env, type : Void -> A<T>, f : A<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(interchange(type, f), Int);
+        return env.forAll(interchange(type, f), AnyVal);
     }
 
     public static function laws<T>(env : Env) : (Void -> A<T>) -> (A<T> -> T) -> Maybe<Report<T>> {

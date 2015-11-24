@@ -4,6 +4,7 @@ import haxez.Combinators as C;
 import haxez.Types.Monad as M;
 
 using haxez.Maybe;
+using haxez.check.Arb;
 using haxez.check.Env;
 using haxez.check.QuickCheck;
 using haxez.check.laws.Monad;
@@ -41,15 +42,15 @@ class Monad {
     }
 
     public static function law1<T>(env : Env, type : Void -> M<T>, f : M<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(leftIdentity(type, f), Int);
+        return env.forAll(leftIdentity(type, f), AnyVal);
     }
 
     public static function law2<T>(env : Env, type : Void -> M<T>, f : M<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(rightIdentity(type, f), Int);
+        return env.forAll(rightIdentity(type, f), AnyVal);
     }
 
     public static function law3<T>(env : Env, type : Void -> M<T>, f : M<T> -> T) : Maybe<Report<T>> {
-        return env.forAll(associativity(type, f), Int);
+        return env.forAll(associativity(type, f), AnyVal);
     }
 
     public static function laws<T>(env : Env) : (Void -> M<T>) -> (M<T> -> T) -> Maybe<Report<T>> {
