@@ -10,8 +10,8 @@ using haxez.check.laws.Functor;
 
 class Functor {
 
-    public static function id<A>(create : A -> F<A>, f : F<A> -> A) : A -> Bool {
-        return function(a : A) : Bool {
+    public static function id<T>(create : T -> F<T>, f : F<T> -> T) : T -> Bool {
+        return function(a : T) : Bool {
             var x = create(a).map(C.identity());
             var y = create(a);
 
@@ -19,8 +19,8 @@ class Functor {
         }
     }
 
-    public static function composition<A>(create : A -> F<A>, f : F<A> -> A) : A -> Bool {
-        return function(a : A) : Bool {
+    public static function composition<T>(create : T -> F<T>, f : F<T> -> T) : T -> Bool {
+        return function(a : T) : Bool {
             var x = create(a).map(C.compose(C.identity())(C.identity()));
             var y = create(a).map(C.identity()).map(C.identity());
 
@@ -28,22 +28,22 @@ class Functor {
         }
     }
 
-    public static function law1<A>(env : Env, create : A -> F<A>, f : F<A> -> A) : Maybe<Report<A>> {
+    public static function law1<T>(env : Env, create : T -> F<T>, f : F<T> -> T) : Maybe<Report<T>> {
         return env.forAll(id(create, f), Int);
     }
 
-    public static function law2<A>(env : Env, create : A -> F<A>, f : F<A> -> A) : Maybe<Report<A>> {
+    public static function law2<T>(env : Env, create : T -> F<T>, f : F<T> -> T) : Maybe<Report<T>> {
         return env.forAll(composition(create, f), Int);
     }
 
-    public static function laws<A>(env : Env) : (A -> F<A>) -> (F<A> -> A) -> Maybe<Report<A>> {
-        return function(create : A -> F<A>, f : F<A> -> A) : Maybe<Report<A>> {
+    public static function laws<T>(env : Env) : (T -> F<T>) -> (F<T> -> T) -> Maybe<Report<T>> {
+        return function(create : T -> F<T>, f : F<T> -> T) : Maybe<Report<T>> {
             var a = env.law1(create, f);
             var b = env.law2(create, f);
 
-            return a.chain(function(x : Report<A>) : Maybe<Report<A>> {
-                return b.map(function(y : Report<A>) : Report<A> {
-                    return x.merge(y);
+            return a.chain(function(x : Report<T>) : Maybe<Report<T>> {
+                return b.map(function(y : Report<T>) : Report<T> {
+                    return x.concat(y);
                 });
             });
         };

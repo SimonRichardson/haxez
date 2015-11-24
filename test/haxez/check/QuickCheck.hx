@@ -21,7 +21,7 @@ class Reports {
 
     public static inline function tries<A>(rep : Report<A>) : Int return EnumValueTools.getParameters(rep)[1];
 
-    public static function merge<A>(a : Report<A>, b : Report<A>) : Report<A> {
+    public static function concat<A>(a : Report<A>, b : Report<A>) : Report<A> {
         return Failure(a.input().concat(b.input()), a.tries() + b.tries());
     }
 }

@@ -27,23 +27,23 @@ abstract Maybe<T>(MaybeType<T>) from MaybeType<T> to MaybeType<T> {
 
     public function empty() : Maybe<T> return Maybe.empty_();
 
-    public function cata<B>(cat : MaybeCata<T, B>) : B {
+    public function cata<A>(cat : MaybeCata<T, A>) : A {
         return switch(this) {
             case Some(v): cat.Some(v);
             case None: cat.None();
         }
     }
 
-    public inline function fold<B>(f : T -> B, g : Void -> B) : B {
+    public inline function fold<A>(f : T -> A, g : Void -> A) : A {
         return this.cata({
             Some: f, 
             None: g
         });
     }
 
-    public inline function orElse<B>(x : Maybe<B>) : Maybe<B> {
+    public inline function orElse<A>(x : Maybe<A>) : Maybe<A> {
         return this.fold(
-            function(x : T) : Maybe<B> return cast Some(x),
+            function(x : T) : Maybe<A> return Some(cast x),
             C.constant0(x)
         );
     }
@@ -68,37 +68,61 @@ abstract Maybe<T>(MaybeType<T>) from MaybeType<T> to MaybeType<T> {
         });
     }
 
-    public inline function ap<B>(a : Maybe<T>) : Maybe<B> {
-        var opt : Maybe<T -> B> = cast this;
-        return opt.chain(function(f : T -> B) : Maybe<B> {
+    public inline function ap<A>(a : Maybe<T>) : Maybe<A> {
+        var opt : Maybe<T -> A> = cast this;
+        return opt.chain(function(f : T -> A) : Maybe<A> {
             return a.map(f);
         });
     }
 
     @:to
-    public function toFunctor() : Functor<T> return new MaybeTypeOf(this);
+    public function toFunctor() : Functor<T> return new MaybeOfFunctor(this);
 
     @:from
-    public static function fromFunctor<T>(a : Functor<T>) : Maybe<T> return MaybeTypeOf.from(cast a);
+    public static function unsafeFromFunctor<T>(a : Functor<T>) : Maybe<T> return MaybeOfFunctor.from(cast a);
 
     @:to
-    public function toMonad() : Monad<T> return new MaybeTypeOf(this);
+    public function toMonad() : Monad<T> return new MaybeOfMonad(this);
 
     @:from
-    public static function fromMonad<T>(a : Monad<T>) : Maybe<T> return MaybeTypeOf.from(cast a);
+    public static function unsafeFromMonad<T>(a : Monad<T>) : Maybe<T> return MaybeOfMonad.from(cast a);
+
+    @:to
+    public function toApplicative() : Applicative<T> return new MaybeOfApplicative(this);
+
+    @:from
+    public static function unsafeFromApplicative<T>(a : Applicative<T>) : Maybe<T> return MaybeOfApplicative.from(cast a);
 }
 
-private class MaybeTypeOf<T> {
+private class MaybeOfFunctor<T> {
 
     private var x : Maybe<T>;
 
     public function new(x : Maybe<T>) this.x = x;
 
-    public static function from<T>(x : MaybeTypeOf<T>) : Maybe<T> return x.x;
+    public static inline function from<T>(x : MaybeOfFunctor<T>) : Maybe<T> return x.x;
+
+    public function map<A>(f : T -> A) : Functor<A> {
+        var m : MaybeType<T> = this.x;
+        var n : Maybe<A> = switch(m) {
+            case Some(a): Some(f(a));
+            case None: None;
+        };
+        return n;
+    }
+}
+
+private class MaybeOfMonad<T> {
+
+    private var x : Maybe<T>;
+
+    public function new(x : Maybe<T>) this.x = x;
+
+    public static function from<T>(x : MaybeOfMonad<T>) : Maybe<T> return x.x;
 
     public function of(v : T) : Monad<T> return Maybe.of_(v);
 
-    public function map<A>(f : T -> A) : Functor<A> {
+    public function map<A>(f : T -> A) : Monad<A> {
         var m : MaybeType<T> = this.x;
         var n : Maybe<A> = switch(m) {
             case Some(a): Some(f(a));
@@ -115,5 +139,38 @@ private class MaybeTypeOf<T> {
                 var n : Maybe<A> = None;
                 n;
         };
+    }
+}
+
+private class MaybeOfApplicative<T> {
+
+    private var x : Maybe<T>;
+
+    public function new(x : Maybe<T>) this.x = x;
+
+    public static inline function from<T>(x : MaybeOfApplicative<T>) : Maybe<T> return x.x;
+
+    public function of(v : T) : Applicative<T> return Maybe.of_(v);
+
+    public function ap<A>(a : Applicative<T>) : Applicative<A> {
+        var m : MaybeType<T> = this.x;
+        return switch(m) {
+            case Some(f): a.map(function(x) {
+                var g : T -> A = cast f;
+                return g(x);
+            });
+            case None: 
+                var n : Maybe<A> = None;
+                n;
+        }
+    }
+
+    public function map<A>(f : T -> A) : Applicative<A> {
+        var m : MaybeType<T> = this.x;
+        var n : Maybe<A> = switch(m) {
+            case Some(a): Some(f(a));
+            case None: None;
+        };
+        return n;
     }
 }

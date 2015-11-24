@@ -5,11 +5,11 @@ using haxez.check.QuickCheck;
 
 class Arb {
 
-    public static function addInt(env : Env) : Env {
+    public static inline function addInt(env : Env) : Env {
         return ArbInt.add(env);
     }
 
-    public static function addString(env : Env) : Env {
+    public static inline function addString(env : Env) : Env {
         return ArbString.add(env);
     }
 }

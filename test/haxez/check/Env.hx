@@ -34,7 +34,7 @@ class Envs {
         return switch (env) {
             case Env(goal): Values(env, [name => method]);
             case Values(check, values): 
-                var x = Reflect.copy(values);
+                var x = Helpers.copy(values);
                 var y = [name => (x.exists(name) ? x.get(name).concat(method) : method)];
                 Values(check, Helpers.extend(x, y));
         }
@@ -73,5 +73,11 @@ private class Helpers {
     public static function extend<K, V>(a : Map<K, V>, b : Map<K, V>) : Map<K, V> {
         for (i in b.keys()) a.set(i, b[i]);
         return a;
+    }
+
+    public static function copy(a : Map<String, Array<PropMethod>>) : Map<String, Array<PropMethod>> {
+        var b = new Map<String, Array<PropMethod>>();
+        for (i in a.keys()) b.set(i, a[i]);
+        return b;
     }
 }

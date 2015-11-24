@@ -2,7 +2,15 @@
 
 -cp src
 -cp test
--neko test.n
+-neko bin/test.n
 -main Test
--cmd neko test.n
+-cmd neko bin/test.n
 
+--next
+
+# Javascript
+
+-cp src
+-cp test
+-js bin/test.js
+-main Test
