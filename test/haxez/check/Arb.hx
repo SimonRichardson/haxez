@@ -6,39 +6,31 @@ using haxez.check.QuickCheck;
 
 class Arb {
 
-    public static inline function addAnyVal(env : Env) : Env {
-        return ArbAnyVal.add(env);
-    }
+    public static inline function addAnyVal(env : Env) : Env return ArbAnyVal.get().concat(env);
 
-    public static inline function addBool(env : Env) : Env {
-        return ArbBool.add(env);
-    }
+    public static inline function addBool(env : Env) : Env return ArbBool.get().concat(env);
 
-    public static inline function addFloat(env : Env) : Env {
-        return ArbFloat.add(env);
-    }
+    public static inline function addFloat(env : Env) : Env return ArbFloat.get().concat(env);
 
-    public static inline function addInt(env : Env) : Env {
-        return ArbInt.add(env);
-    }
+    public static inline function addInt(env : Env) : Env return ArbInt.get().concat(env);
 
-    public static inline function addString(env : Env) : Env {
-        return ArbString.add(env);
-    }
+    public static inline function addString(env : Env) : Env return ArbString.get().concat(env);
 }
 
 class AnyVal {}
 
 class ArbAnyVal {
 
-    public static function add(env : Env) : Env {
-        return env.method("arb", Helpers.strictEquals(AnyVal), function(args : Array<Dynamic>) : Dynamic {
+    public static function get() : Env return arb(Env(0));
+
+    private static function arb(env : Env) : Env {
+        return env.method("arb", Helpers.strictEquals(AnyVal), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var values : Array<Dynamic> = [Bool, Float, Int, String];
             var index = Rnd.randomRange(0, values.length);
             var value = env.call("arb", [values[index]].concat([for (i in 1...args.length) args[i]]));
             return switch (value) {
                 case Some(a): a;
-                case None: throw "Unable to generate value";
+                case None: throw "Unable to generate value for AnyVal";
             }
         });
     }
@@ -46,11 +38,16 @@ class ArbAnyVal {
 
 class ArbBool {
 
-    public static function add(env : Env) : Env {
-        return env.method("arb", Helpers.strictEquals(Bool), function(args : Array<Dynamic>) : Dynamic {
+    public static function get() : Env return shrink(arb(Env(0)));
+
+    private static function arb(env : Env) : Env {
+        return env.method("arb", Helpers.strictEquals(Bool), function(env : Env, args : Array<Dynamic>) : Dynamic {
             return Rnd.randomRange(0, 1) == 1;
-        })
-        .method("shrink", Helpers.isBool(), function(args : Array<Dynamic>) : Dynamic {
+        });
+    }
+
+    private static function shrink(env : Env) : Env {
+        return env.method("shrink", Helpers.isBool(), function(env : Env, args : Array<Dynamic>) : Dynamic {
             return [args[0]];
         });
     }
@@ -58,12 +55,17 @@ class ArbBool {
 
 class ArbFloat {
 
-    public static function add(env : Env) : Env {
-        return env.method("arb", Helpers.strictEquals(Float), function(args : Array<Dynamic>) : Dynamic {
+    public static function get() : Env return shrink(arb(Env(0)));
+
+    private static function arb(env : Env) : Env {
+        return env.method("arb", Helpers.strictEquals(Float), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var variance = Math.pow(2, 32) / env.goal();
             return Rnd.randomRangeF(-variance, variance);
-        })
-        .method("shrink", Helpers.isFloat(), function(args : Array<Dynamic>) : Dynamic {
+        });
+    }
+
+    private static function shrink(env : Env) : Env {
+        return env.method("shrink", Helpers.isFloat(), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var a = cast(args[0], Float);
             var accum = [0.0];
             var x = a;
@@ -81,12 +83,17 @@ class ArbFloat {
 
 class ArbInt {
 
-    public static function add(env : Env) : Env {
-        return env.method("arb", Helpers.strictEquals(Int), function(args : Array<Dynamic>) : Dynamic {
+    public static function get() : Env return shrink(arb(Env(0)));
+
+    private static function arb(env : Env) : Env {
+        return env.method("arb", Helpers.strictEquals(Int), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var variance = Math.floor(Math.pow(2, 32) / env.goal());
             return Rnd.randomRange(-variance, variance);
-        })
-        .method("shrink", Helpers.isInt(), function(args : Array<Dynamic>) : Dynamic {
+        });
+    }
+
+    private static function shrink(env : Env) : Env {
+        return env.method("shrink", Helpers.isInt(), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var a = cast(args[0], Int);
             var accum = [0];
             var x = a;
@@ -104,16 +111,21 @@ class ArbInt {
 
 class ArbString {
 
-    public static function add(env : Env) : Env {
-        return env.method("arb", Helpers.strictEquals(String), function(args : Array<Dynamic>) : Dynamic {
+    public static function get() : Env return shrink(arb(Env(0)));
+
+    private static function arb(env : Env) : Env {
+        return env.method("arb", Helpers.strictEquals(String), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var accum = [];
             var length = Rnd.randomRange(0, cast(args[1], Int));
             for(i in 0...length) {
                 accum.push(String.fromCharCode(Math.floor(Rnd.randomRange(32, 126))));
             }
             return accum.join("");
-        })
-        .method("shrink", Helpers.isString(), function(args : Array<Dynamic>) : Dynamic {
+        });
+    }
+
+    private static function shrink(env : Env) : Env {
+        return env.method("shrink", Helpers.isString(), function(env : Env, args : Array<Dynamic>) : Dynamic {
             var accum = [""];
             var str = cast(args[0], String);
             var x = str.length;
@@ -131,26 +143,26 @@ class ArbString {
 
 private class Helpers {
 
-    public static function strictEquals<A, B>(x : A) : Array<B> -> Bool {
-        return function(y : Array<B>) : Bool {
+    public static function strictEquals<A, B>(x : A) : Env -> Array<B> -> Bool {
+        return function(env : Env, y : Array<B>) : Bool {
             return cast y[0] == cast x;
         };
     }
 
-    public static function isBool<A>() : Array<A> -> Bool {
-        return function(x : Array<A>) : Bool {
+    public static function isBool<A>() : Env -> Array<A> -> Bool {
+        return function(env : Env, x : Array<A>) : Bool {
             return Std.is(x[0], Bool);
         };
     }
 
-    public static function isFloat<A>() : Array<A> -> Bool {
-        return function(x : Array<A>) : Bool {
+    public static function isFloat<A>() : Env -> Array<A> -> Bool {
+        return function(env : Env, x : Array<A>) : Bool {
             return Std.is(x[0], Float);
         };
     }
 
-    public static function isInt<A>() : Array<A> -> Bool {
-        return function(x : Array<A>) : Bool {
+    public static function isInt<A>() : Env -> Array<A> -> Bool {
+        return function(env : Env, x : Array<A>) : Bool {
             return Std.is(x[0], Int);
         };
     }

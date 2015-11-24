@@ -42,7 +42,7 @@ class Envs {
 
     public static function call<A>(env : Env, name : String, args : Array<Dynamic>) : Maybe<A> {
         return env.findRegistered(name, args).map(function(f : Function) : A {
-            return f(args);
+            return f(env, args);
         });
     }
 
@@ -50,7 +50,7 @@ class Envs {
         return Helpers.option(env.values().get(name)).chain(function(a : Array<PropMethod>) : Maybe<Function> {
             var possible = Helpers.option(a.find(function(a : PropMethod) : Bool {
                 return switch (a) {
-                    case Method(predicate, _): predicate(args);
+                    case Method(predicate, _): predicate(env, args);
                 };
             }));
             return possible.map(function(a : PropMethod) : Function {
@@ -59,6 +59,11 @@ class Envs {
                 };
             });
         });
+    }
+
+    public static function concat(a : Env, b : Env) : Env {
+        var values = Helpers.merge(Helpers.merge(new Map(), a.values()), b.values());
+        return Values(Env(a.goal() + b.goal()), values);
     }
 }
 
@@ -79,5 +84,18 @@ private class Helpers {
         var b = new Map<String, Array<PropMethod>>();
         for (i in a.keys()) b.set(i, a[i]);
         return b;
+    }
+
+    public static function merge(a : Map<String, Array<PropMethod>>, b : Map<String, Array<PropMethod>>) : Map<String, Array<PropMethod>> {
+        var accum = copy(a);
+        for (name in b.keys()) {
+            var y = if (accum.exists(name)) {
+                accum.get(name).concat(b.get(name));
+            } else {
+                b.get(name);
+            };
+            accum.set(name, y);
+        }
+        return accum;
     }
 }

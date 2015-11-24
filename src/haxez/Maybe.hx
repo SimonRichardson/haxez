@@ -31,7 +31,7 @@ abstract Maybe<T>(MaybeType<T>) from MaybeType<T> to MaybeType<T> {
         return switch(this) {
             case Some(v): cat.Some(v);
             case None: cat.None();
-        }
+        };
     }
 
     public inline function fold<A>(f : T -> A, g : Void -> A) : A {
@@ -118,7 +118,7 @@ private class MaybeOfMonad<T> {
 
     public function new(x : Maybe<T>) this.x = x;
 
-    public static function from<T>(x : MaybeOfMonad<T>) : Maybe<T> return x.x;
+    public static inline function from<T>(x : MaybeOfMonad<T>) : Maybe<T> return x.x;
 
     public function of(v : T) : Monad<T> return Maybe.of_(v);
 
