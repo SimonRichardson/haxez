@@ -29,6 +29,20 @@ abstract Either<L, R>(EitherType<L, R>) from EitherType<L, R> to EitherType<L, R
         };
     }
 
+    public inline function swap() : Either<R, L> {
+        return this.fold(
+            function(a : L) : Either<R, L> return Right(a),
+            function(b : R) : Either<R, L> return Left(b)
+        );
+    }
+
+    public inline function bimap<A, B>(f : L -> A, g : R -> B) : Either<A, B> {
+        return this.fold(
+            function(a : L) : Either<A, B> return Left(f(a)),
+            function(b : R) : Either<A, B> return Right(g(b))
+        );
+    }
+
     public inline function fold<T>(f : L -> T, g : R -> T) : T {
         return this.cata({
             Left: f,
