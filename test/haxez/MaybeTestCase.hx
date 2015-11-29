@@ -35,7 +35,7 @@ class MaybeTestCase extends HaxeUnitTestCase {
         var functor = Functor.laws(this.env);
         assert(functor(
             function(a : T) : F<T> {
-                return Maybe.of_(a);
+                return Maybe.lift(a);
             },
             function(a : F<T>) : T {
                 var b : Maybe<T> = a;

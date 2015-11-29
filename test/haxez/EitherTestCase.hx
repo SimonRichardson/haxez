@@ -35,7 +35,7 @@ class EitherTestCase extends HaxeUnitTestCase {
         var functor = Functor.laws(this.env);
         assert(functor(
             function(a : R) : F<R> {
-                return Either.of_(a);
+                return Either.lift(a);
             },
             function(a : F<R>) : R {
                 var b : Either<L, R> = a;
@@ -49,7 +49,7 @@ class EitherTestCase extends HaxeUnitTestCase {
         assert(monad(
             function() : M<R> {
                 // This is clearly wrong, but how do you generate a empty either?
-                return Either.of_(cast 0);
+                return Either.lift(cast 0);
             },
             function(a : M<R>) : R {
                 var b : Either<L, R> = a;
@@ -62,7 +62,7 @@ class EitherTestCase extends HaxeUnitTestCase {
         var applicative = Applicative.laws(this.env);
         assert(applicative(
             function() : A<R> {
-                return Either.of_(cast 0);
+                return Either.lift(cast 0);
             },
             function(a : A<R>) : R {
                 var b : Either<L, R> = a;

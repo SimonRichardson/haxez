@@ -16,9 +16,9 @@ abstract IO<T>(IOType<T>) from IOType<T> to IOType<T> {
     }
 
     @:noUsing
-    public static inline function of_<T>(v : T) : IO<T> return IOType(C.constant0(v));
+    public static inline function lift<T>(v : T) : IO<T> return IOType(C.constant0(v));
 
-    public function of(v : T) : IO<T> return IO.of_(v);
+    public function of(v : T) : IO<T> return IO.lift(v);
 
     public inline function unsafePerform() : T {
         return switch(this) {
@@ -34,7 +34,7 @@ abstract IO<T>(IOType<T>) from IOType<T> to IOType<T> {
 
     public inline function map<A>(f : T -> A) : IO<A> {
         return this.chain(function(a : T) : IO<A> {
-            return IO.of_(f(a));
+            return IO.lift(f(a));
         });
     }
 
@@ -91,7 +91,7 @@ private class IOOfMonad<T> {
 
     public static inline function from<T>(x : IOOfMonad<T>) : IO<T> return x.x;
 
-    public function of(v : T) : Monad<T> return IO.of_(v);
+    public function of(v : T) : Monad<T> return IO.lift(v);
 
     public function map<A>(f : T -> A) : Monad<A> {
         var m : IOType<T> = this.x;
@@ -120,7 +120,7 @@ private class IOOfApplicative<T> {
 
     public static inline function from<T>(x : IOOfApplicative<T>) : IO<T> return x.x;
 
-    public function of(v : T) : Applicative<T> return IO.of_(v);
+    public function of(v : T) : Applicative<T> return IO.lift(v);
 
     public function ap<A>(a : Applicative<T>) : Applicative<A> {
         var m : IOType<T> = this.x;

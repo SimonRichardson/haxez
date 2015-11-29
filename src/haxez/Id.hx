@@ -16,9 +16,9 @@ abstract Id<T>(IdType<T>) from IdType<T> to IdType<T> {
     }
 
     @:noUsing
-    public static inline function of_<T>(v : T) : Id<T> return IdType(v);
+    public static inline function lift<T>(v : T) : Id<T> return IdType(v);
 
-    public function of(v : T) : Id<T> return Id.of_(v);
+    public function of(v : T) : Id<T> return Id.lift(v);
 
     public inline function run() : T {
         return switch(this) {
@@ -34,7 +34,7 @@ abstract Id<T>(IdType<T>) from IdType<T> to IdType<T> {
 
     public inline function map<A>(f : T -> A) : Id<A> {
         return this.chain(function(a : T) : Id<A> {
-            return Id.of_(f(a));
+            return Id.lift(f(a));
         });
     }
 
@@ -89,7 +89,7 @@ private class IdOfMonad<T> {
 
     public static inline function from<T>(x : IdOfMonad<T>) : Id<T> return x.x;
 
-    public function of(v : T) : Monad<T> return Id.of_(v);
+    public function of(v : T) : Monad<T> return Id.lift(v);
 
     public function map<A>(f : T -> A) : Monad<A> {
         var m : IdType<T> = this.x;
@@ -116,7 +116,7 @@ private class IdOfApplicative<T> {
 
     public static inline function from<T>(x : IdOfApplicative<T>) : Id<T> return x.x;
 
-    public function of(v : T) : Applicative<T> return Id.of_(v);
+    public function of(v : T) : Applicative<T> return Id.lift(v);
 
     public function ap<A>(a : Applicative<T>) : Applicative<A> {
         var m : IdType<T> = this.x;

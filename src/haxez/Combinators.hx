@@ -18,6 +18,14 @@ class Combinators {
         };
     }
 
+    public inline static function andThen<A, B, C>(g : A -> B) : (B -> C) -> (A -> C) {
+        return function(f : B -> C) : A -> C {
+            return function(x : A) : C {
+                return compose(f)(g)(x);
+            };
+        };
+    } 
+
     // K - Combinator (0 argument addition)
     public inline static function constant0<B>(v : B) : Void -> B {
         return function() : B {
@@ -36,6 +44,12 @@ class Combinators {
     public inline static function identity<A>() : A -> A {
         return function(x : A) : A {
             return x;
+        };
+    }
+
+    public inline static function castIdentity<A, B>() : A -> B {
+        return function(x : A) : B {
+            return cast x;
         };
     }
 

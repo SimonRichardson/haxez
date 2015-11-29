@@ -32,7 +32,7 @@ class IdTestCase extends HaxeUnitTestCase {
         var functor = Functor.laws(this.env);
         assert(functor(
             function(a : T) : F<T> {
-                return Id.of_(a);
+                return Id.lift(a);
             },
             function(a : F<T>) : T {
                 var b : Id<T> = a;
@@ -45,7 +45,7 @@ class IdTestCase extends HaxeUnitTestCase {
         var monad = Monad.laws(this.env);
         assert(monad(
             function() : M<T> {
-                return Id.of_(cast 0);
+                return Id.lift(cast 0);
             },
             function(a : M<T>) : T {
                 var b : Id<T> = a;
@@ -58,7 +58,7 @@ class IdTestCase extends HaxeUnitTestCase {
         var applicative = Applicative.laws(this.env);
         assert(applicative(
             function() : A<T> {
-                return Id.of_(cast 0);
+                return Id.lift(cast 0);
             },
             function(a : A<T>) : T {
                 var b : Id<T> = a;

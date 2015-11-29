@@ -18,9 +18,9 @@ abstract Either<L, R>(EitherType<L, R>) from EitherType<L, R> to EitherType<L, R
     }
 
     @:noUsing
-    public static inline function of_<L, R>(v : R) : Either<L, R> return Right(v);
+    public static inline function lift<L, R>(v : R) : Either<L, R> return Right(v);
 
-    public function of(v : R) : Either<L, R> return Either.of_(v);
+    public function of(v : R) : Either<L, R> return Either.lift(v);
 
     public function cata<T>(cat : EitherCata<L, R, T>) : T {
         return switch(this) {
@@ -59,7 +59,7 @@ abstract Either<L, R>(EitherType<L, R>) from EitherType<L, R> to EitherType<L, R
 
     public inline function map<T>(f : R -> T) : Either<L, T> {
         return this.chain(function(a : R) : Either<L, T> {
-            return Either.of_(f(a));
+            return Either.lift(f(a));
         });
     }
 
@@ -115,7 +115,7 @@ private class EitherOfMonad<L, R> {
 
     public static inline function from<L, R>(x : EitherOfMonad<L, R>) : Either<L, R> return x.x;
 
-    public function of(v : R) : Monad<R> return Either.of_(v);
+    public function of(v : R) : Monad<R> return Either.lift(v);
 
     public function map<T>(f : R -> T) : Monad<T> {
         var m : EitherType<L, R> = this.x;
@@ -145,7 +145,7 @@ private class EitherOfApplicative<L, R> {
 
     public static inline function from<L, R>(x : EitherOfApplicative<L, R>) : Either<L, R> return x.x;
 
-    public function of(v : R) : Applicative<R> return Either.of_(v);
+    public function of(v : R) : Applicative<R> return Either.lift(v);
 
     public function ap<T>(a : Applicative<R>) : Applicative<T> {
         var m : EitherType<L, R> = this.x;

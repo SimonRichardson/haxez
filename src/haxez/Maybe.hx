@@ -18,12 +18,12 @@ abstract Maybe<T>(MaybeType<T>) from MaybeType<T> to MaybeType<T> {
     }
 
     @:noUsing
-    public static inline function of_<T>(v : T) : Maybe<T> return Some(v);
+    public static inline function lift<T>(v : T) : Maybe<T> return Some(v);
 
     @:noUsing
     public static inline function empty_<T>() : Maybe<T> return None;
 
-    public function of(v : T) : Maybe<T> return Maybe.of_(v);
+    public function of(v : T) : Maybe<T> return Maybe.lift(v);
 
     public function empty() : Maybe<T> return Maybe.empty_();
 
@@ -64,7 +64,7 @@ abstract Maybe<T>(MaybeType<T>) from MaybeType<T> to MaybeType<T> {
 
     public inline function map<A>(f : T -> A) : Maybe<A> {
         return this.chain(function(a : T) : Maybe<A> {
-            return Maybe.of_(f(a));
+            return Maybe.lift(f(a));
         });
     }
 
@@ -120,7 +120,7 @@ private class MaybeOfMonad<T> {
 
     public static inline function from<T>(x : MaybeOfMonad<T>) : Maybe<T> return x.x;
 
-    public function of(v : T) : Monad<T> return Maybe.of_(v);
+    public function of(v : T) : Monad<T> return Maybe.lift(v);
 
     public function map<A>(f : T -> A) : Monad<A> {
         var m : MaybeType<T> = this.x;
@@ -150,7 +150,7 @@ private class MaybeOfApplicative<T> {
 
     public static inline function from<T>(x : MaybeOfApplicative<T>) : Maybe<T> return x.x;
 
-    public function of(v : T) : Applicative<T> return Maybe.of_(v);
+    public function of(v : T) : Applicative<T> return Maybe.lift(v);
 
     public function ap<A>(a : Applicative<T>) : Applicative<A> {
         var m : MaybeType<T> = this.x;

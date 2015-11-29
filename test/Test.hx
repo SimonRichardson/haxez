@@ -17,6 +17,7 @@ class Test {
             .addAnyVal();
 
         var runner = new TestRunner();
+        runner.add(new haxez.CoyonedaTestCase(env));
         runner.add(new haxez.EitherTestCase(env));
         runner.add(new haxez.IdTestCase(env));
         runner.add(new haxez.IOTestCase(env));
