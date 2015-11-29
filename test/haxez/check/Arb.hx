@@ -6,7 +6,9 @@ using haxez.check.QuickCheck;
 
 class Arb {
 
-    public static inline function addAnyVal(env : Env) : Env return ArbAnyVal.get().concat(env);
+    public static inline function addAnyVal(env : Env, values : Array<Dynamic>) : Env {
+        return ArbAnyVal.get(values).concat(env);
+    }
 
     public static inline function addBool(env : Env) : Env return ArbBool.get().concat(env);
 
@@ -21,11 +23,10 @@ class AnyVal {}
 
 class ArbAnyVal {
 
-    public static function get() : Env return arb(Env(0));
+    public static function get(values : Array<Dynamic>) : Env return arb(Env(0), values);
 
-    private static function arb(env : Env) : Env {
+    private static function arb(env : Env, values : Array<Dynamic>) : Env {
         return env.method("arb", Helpers.strictEquals(AnyVal), function(env : Env, args : Array<Dynamic>) : Dynamic {
-            var values : Array<Dynamic> = [Bool, Float, Int, String];
             var index = Rnd.randomRange(0, values.length);
             var value = env.call("arb", [values[index]].concat([for (i in 1...args.length) args[i]]));
             return switch (value) {
