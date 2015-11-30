@@ -1,6 +1,6 @@
 # haxez
 
-![](http://castledb.org/img/haxelogo.png)
+![](img/logo-bw.png)
 
 haxez is a haxe library for functional programming.
 
