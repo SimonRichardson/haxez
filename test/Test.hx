@@ -17,12 +17,12 @@ class Test {
             .addAnyVal([Bool, Float, Int, String]);
 
         var runner = new TestRunner();
-        runner.add(new haxez.CoyonedaTestCase(env));
-        runner.add(new haxez.EitherTestCase(env));
-        //runner.add(new haxez.FreeTestCase(env));
-        runner.add(new haxez.IdTestCase(env));
-        runner.add(new haxez.IOTestCase(env));
-        runner.add(new haxez.MaybeTestCase(env));
+        //runner.add(new haxez.CoyonedaTestCase(env));
+        //runner.add(new haxez.EitherTestCase(env));
+        runner.add(new haxez.FreeTestCase(env));
+        //runner.add(new haxez.IdTestCase(env));
+        //runner.add(new haxez.IOTestCase(env));
+        //runner.add(new haxez.MaybeTestCase(env));
         runner.run();
     }
 }

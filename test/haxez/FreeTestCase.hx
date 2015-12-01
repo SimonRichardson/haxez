@@ -2,9 +2,11 @@ package haxez;
 
 import haxez.Combinators as C;
 import haxez.Types.Functor as F;
+import haxez.Types.Monad as M;
 import haxez.check.Arb;
 import haxez.check.adapters.HaxeUnitTestCase;
 import haxez.check.laws.Functor;
+import haxez.check.laws.Monad;
 
 using haxez.Id;
 using haxez.Free;
@@ -22,7 +24,7 @@ class FreeTestCase extends HaxeUnitTestCase {
     }
 
     private inline function get<T>(a : Free<T>) : T {
-        var x : Id<T> = Free.runFC(a, C.identity(), Id);
+        var x : Id<T> = Free.runFC(a, C.identity(), Id.lift);
         return x.run();
     }
 

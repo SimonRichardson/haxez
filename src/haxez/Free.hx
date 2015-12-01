@@ -5,16 +5,17 @@ import haxez.Types;
 
 using haxez.Coyoneda;
 using haxez.Either;
+using haxez.Free;
 
 enum FreeType<T> {
     Return(x : T);
-    Suspend(x : T);
-    Chain<B>(x : T, f : T -> Free<B>);
+    Suspend(x : Free<T>);
+    Chain<A>(x : Free<T>, f : T -> Free<A>);
 }
-typedef FreeCata<T, B, C> = {
-    function Return(x : T) : C;
-    function Suspend(x : T) : C;
-    function Chain(x : Free<T>, f : T -> Free<B>) : C;
+typedef FreeCata<T, B> = {
+    function Return(x : T) : B;
+    function Suspend(x : Free<T>) : B;
+    function Chain<A>(x : Free<T>, f : T -> Free<A>) : B;
 }
 
 abstract Free<T>(FreeType<T>) from FreeType<T> to FreeType<T> {
@@ -28,7 +29,7 @@ abstract Free<T>(FreeType<T>) from FreeType<T> to FreeType<T> {
 
     @:noUsing
     public static inline function liftF<T>(v : Functor<T>) : Free<T> {
-        return Suspend(v.map(function(a) return Return(a)));
+        return cast Suspend(v.map(function(a) return Return(a)));
     }
 
     @:noUsing
@@ -36,13 +37,13 @@ abstract Free<T>(FreeType<T>) from FreeType<T> to FreeType<T> {
         return Free.liftF(Coyoneda.lift(c));
     }
 
-    public static function runFC<T, A, B>(m : Free<T>, f : A -> B, p : Class<Pointed<B>>) : B {
+    public static function runFC<T, A, B>(m : Free<T>, f : A -> Functor<B>, p : T -> B) : B {
         return m.foldMap(p, function(coyo) return f(coyo.k()).map(coyo.fi()));
     }
 
     public function of(v : T) : Free<T> return Free.lift(v);
 
-    public function cata<B, C>(cat : FreeCata<T, B, C>) : C {
+    public function cata<B>(cat : FreeCata<T, B>) : B {
         return switch(this) {
             case Return(v): cat.Return(v);
             case Suspend(v): cat.Suspend(v);
@@ -51,13 +52,12 @@ abstract Free<T>(FreeType<T>) from FreeType<T> to FreeType<T> {
     }
 
     public function chain<A>(f : T -> Free<A>) : Free<A> {
-        var g = function(_) : Free<A> return Chain(this, f);
-        return this.cata({
-            Return: g,
-            Suspend: g,
+        return cast this.cata({
+            Return: function(x) return Chain(this, f),
+            Suspend: function(x) return Chain(this, f),
             Chain: function(x, g) {
                 return Chain(x, function(y) {
-                    return Chain(g(y), f);
+                    return Chain(cast g(y), f);
                 });
             }
         });
@@ -75,31 +75,92 @@ abstract Free<T>(FreeType<T>) from FreeType<T> to FreeType<T> {
         return this.resume().fold(f, g);
     }
 
-    public function foldMap<A>(p : Class<Pointed<B>>, f : A -> Free<B>) : B {
-        return this.resume().cata({
+    public function foldMap<A, B>(p : T -> B, f : A -> Free<B>) : B {
+        return cast this.resume().cata({
             Left: function(x) {
                 return f(x).chain(function(y) {
-                    return y.foldMap(p, f);
+                    var a : Free<T> = cast y;
+                    return cast a.foldMap(p, f);
                 });
-            Right: function(x) return p.of(x);
+            },
+            Right: function(x) return cast p(x)
         });
     }
 
     public function resume<L, R>() : Either<L, R> {
-        return this.cata({
-            Return: function(x) return Either.Right(x),
-            Suspend: function(x) return Either.Left(x),
+        return cast this.cata({
+            Return: function(x) return Right(x),
+            Suspend: function(x) return Left(x),
             Chain: function(x, f) {
-                return x.cata({
-                    Return: function(y) return f(y).resume();
+                return cast x.cata({
+                    Return: function(y) return f(y).resume(),
                     Suspend: function(y) {
-                        return Left(y.map(function(z) return z.chain(f)));
+                        return Left(y.map(function(z) {
+                            var a : Free<T> = cast z;
+                            return a.chain(f);
+                        }));
                     },
                     Chain: function(y, g) {
-                        return y.chain(function(z) return g(z).chain(f)).resume();
+                        return y.chain(function(z) {
+                            return g(z).chain(cast f);
+                        }).resume();
                     }
                 });
             }
         });
+    }
+
+    @:to
+    public function toFunctor() : Functor<T> return new FreeOfFunctor(this);
+
+    @:from
+    public static function unsafeFromFunctor<T>(a : Functor<T>) : Free<T> {
+        return FreeOfFunctor.from(cast a);
+    }
+
+    @:to
+    public function toMonad() : Monad<T> return new FreeOfMonad(this);
+
+    @:from
+    public static function unsafeFromMonad<T>(a : Monad<T>) : Free<T> return FreeOfMonad.from(cast a);
+}
+
+private class FreeOfFunctor<F> {
+
+    private var x : Free<F>;
+
+    public function new(x : Free<F>) this.x = x;
+
+    public static inline function from<F>(x : FreeOfFunctor<F>) : Free<F> {
+        return x.x;
+    }
+
+    public function map<A>(f : F -> A) : Functor<A> {
+        var m : FreeType<A> = this.x.map(f);
+        var n : Free<A> = m;
+        return n;
+    }
+}
+
+private class FreeOfMonad<T> {
+
+    private var x : Free<T>;
+
+    public function new(x : Free<T>) this.x = x;
+
+    public static inline function from<T>(x : FreeOfMonad<T>) : Free<T> return x.x;
+
+    public function of(v : T) : Monad<T> return Free.lift(v);
+
+    public function map<A>(f : T -> A) : Monad<A> {
+        var m : FreeType<A> = this.x.map(f);
+        var n : Free<A> = m;
+        return n;
+    }
+
+    public function chain<A>(f : T -> Monad<A>) : Monad<A> {
+        var m : FreeType<A> = this.x.chain(cast f);
+        var n : Free<A> = m;
+        return n;
     }
 }
