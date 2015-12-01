@@ -32,6 +32,18 @@ abstract Coyoneda<F, A>(CoyonedaType<F, A>) from CoyonedaType<F, A> to CoyonedaT
         };
     }
 
+    public function fi() : Functor<F> {
+        return switch(this) {
+            case CoyonedaType(fi, _): fi;
+        };
+    }
+
+    public function k() : F -> A {
+        return switch(this) {
+            case CoyonedaType(_, k): k;
+        };
+    }
+
     @:to
     public function toFunctor() : Functor<A> return new CoyonedaOfFunctor(this);
 
