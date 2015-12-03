@@ -1,61 +1,89 @@
 package haxez;
 
-import haxez.Combinators as C;
-import haxez.Types;
+import haxez.F1;
+import haxez.Functor;
+import haxez.T;
 
-using haxez.Coyoneda;
-
-enum CoyonedaType<F, A> {
-    CoyonedaType(fi : Functor<F>, k : F -> A);
+enum CoyonedaNative<F, A> {
+    Coyoneda(fi : _1<F, Dynamic>, k : F1<Dynamic, A>);
 }
 
-abstract Coyoneda<F, A>(CoyonedaType<F, A>) from CoyonedaType<F, A> to CoyonedaType<F, A> {
+class CoyonedaNatives {
 
-    inline function new(coy : CoyonedaType<F, A>) {
-        this = coy;
+    inline public static function fromCoyoneda<F, A>(x : AbstractCoyoneda<F, A>) : CoyonedaNative<F, A> {
+        return CoyonedaNative.Coyoneda(x.fi, x.k);
     }
 
-    @:noUsing
-    public static inline function lift<F, A>(fi : Functor<F>) : Coyoneda<F, A> {
-        return CoyonedaType(fi, C.castIdentity());
-    }
-
-    public function map<B>(f : A -> B) : Coyoneda<F, B> {
-        return switch(this) {
-            case CoyonedaType(fi, k): CoyonedaType(fi, C.andThen(k)(f));
+    inline public static function toCoyoneda<F, A>(x : CoyonedaNative<F, A>) : AbstractCoyoneda<F, A> {
+        return switch(x) {
+            case Coyoneda(fi, k): new AbstractCoyoneda(fi, k);
         };
     }
+}
 
-    public function lower() : Functor<A> {
-        return switch(this) {
-            case CoyonedaType(fi, k): fi.map(k);
-        };
+@:allow(haxez.CoyonedaNatives.fromCoyoneda)
+class AbstractCoyoneda<F, A> implements _1<Coyoneda<F, Dynamic>, A> {
+
+    private var fi : _1<F, Dynamic>;
+    private var k : F1<Dynamic, A>;
+
+    public function new(fi : _1<F, Dynamic>, k : F1<Dynamic, A>) {
+        this.fi = fi;
+        this.k = k;
+    }
+
+    inline public static function functor<G>() : Functor<Coyoneda<G, Dynamic>> {
+        return new CoyonedaOfFunctor();
+    }
+
+    inline public static function lift<S, B>(s : _1<S, B>) : Coyoneda<S, B> {
+        return new AbstractCoyoneda(s, F1_.id());
+    }
+
+    public function map<B>(f : F1<A, B>) : AbstractCoyoneda<F, B> {
+        return new AbstractCoyoneda(fi, k.andThen(cast f));
+    }
+
+    public function run(f : Functor<F>) : _1<F, A> return f.map(this.k, this.fi);
+}
+
+abstract Coyoneda<F, A>(AbstractCoyoneda<F, A>) from AbstractCoyoneda<F, A> to AbstractCoyoneda<F, A> {
+
+    inline function new(x : AbstractCoyoneda<F, A>) this = x;
+
+    inline public static function functor<G>() : Functor<Coyoneda<G, Dynamic>> {
+        return AbstractCoyoneda.functor();
+    }
+
+    inline public static function lift<S, B>(s : _1<S, B>) : Coyoneda<S, B> {
+        return AbstractCoyoneda.lift(s);
+    }
+
+    inline public function map<B>(f : F1<A, B>) : Coyoneda<F, B> {
+        var x : AbstractCoyoneda<F, A> = this;
+        return x.map(f);
+    }
+
+    inline public function run(f : Functor<F>) : _1<F, A> {
+        var x : AbstractCoyoneda<F, A> = this;
+        return x.run(f);
     }
 
     @:to
-    public function toFunctor() : Functor<A> return new CoyonedaOfFunctor(this);
+    inline public function toCoyonedaNative() : CoyonedaNative<F, A> return CoyonedaNatives.fromCoyoneda(this);
 
     @:from
-    public static function unsafeFromFunctor<F, A>(a : Functor<F>) : Coyoneda<F, A> {
-        return CoyonedaOfFunctor.from(cast a);
+    inline public static function fromCoyonedaNative<F, A>(x : CoyonedaNative<F, A>) : Coyoneda<F, A> {
+        return CoyonedaNatives.toCoyoneda(x);
     }
 }
 
-private class CoyonedaOfFunctor<F, A> {
+class CoyonedaOfFunctor<G> implements Functor<Coyoneda<G, Dynamic>> {
 
-    private var x : Coyoneda<F, A>;
+    public function new() {}
 
-    public function new(x : Coyoneda<F, A>) this.x = x;
-
-    public static inline function from<F, A>(x : CoyonedaOfFunctor<F, A>) : Coyoneda<F, A> {
-        return x.x;
-    }
-
-    public function map<B>(f : A -> B) : Functor<B> {
-        var m : CoyonedaType<F, A> = this.x;
-        var n : Coyoneda<F, B> = switch(m) {
-            case CoyonedaType(fi, k): CoyonedaType(fi, C.andThen(k)(f));
-        };
-        return n;
+    public function map<A, B>(f : F1<A, B>, fa : _1<Coyoneda<G, Dynamic>, A>) : _1<Coyoneda<G, Dynamic>, B> {
+        var x : AbstractCoyoneda<Coyoneda<G, Dynamic>, A> = cast fa;
+        return cast x.map(f);
     }
 }

@@ -1,171 +1,152 @@
 package haxez;
 
-import haxez.Combinators as C;
-import haxez.Types;
+import haxez.F1;
+import haxez.Monad;
+import haxez.T;
 
-using haxez.Either;
+typedef EitherNative<L, R> = haxe.ds.Either<L, R>;
 
-typedef EitherType<A, B> = haxe.ds.Either<A, B>;
-typedef EitherCata<A, B, C> = {
-    function Left(l : A) : C;
-    function Right(r : B) : C;
-}
+class EitherNatives {
 
-abstract Either<L, R>(EitherType<L, R>) from EitherType<L, R> to EitherType<L, R> {
-
-    inline function new(eit : EitherType<L, R>) {
-        this = eit;
-    }
-
-    @:noUsing
-    public static inline function lift<L, R>(v : R) : Either<L, R> return Right(v);
-
-    public function of(v : R) : Either<L, R> return Either.lift(v);
-
-    public function cata<T>(cat : EitherCata<L, R, T>) : T {
-        return switch(this) {
-            case Left(v): cat.Left(v);
-            case Right(v): cat.Right(v);
-        };
-    }
-
-    public inline function swap() : Either<R, L> {
-        return this.fold(
-            function(a : L) : Either<R, L> return Right(a),
-            function(b : R) : Either<R, L> return Left(b)
+    inline public static function fromEither<A, B>(x : AbstractEither<A, B>) : EitherNative<A, B> {
+        return x.fold(
+            new F1Lift(function(x) return EitherNative.Left(x)),
+            new F1Lift(function(x) return EitherNative.Right(x))
         );
     }
 
-    public inline function bimap<A, B>(f : L -> A, g : R -> B) : Either<A, B> {
-        return this.fold(
-            function(a : L) : Either<A, B> return Left(f(a)),
-            function(b : R) : Either<A, B> return Right(g(b))
+    inline public static function toEither<A, B>(x : EitherNative<A, B>) : AbstractEither<A, B> {
+        return switch(x) {
+            case Left(a): new Left(a);
+            case Right(a): new Right(a);
+        };
+    }
+}
+
+class AbstractEither<A, B> implements _1<AbstractEither<A, Dynamic>, B> {
+
+    private function new() {}
+
+    inline public static function monad<L>() : Monad<AbstractEither<L, Dynamic>> {
+        return new EitherOfMonad<L>();
+    }
+
+    public function bimap<C, D>(f : F1<A, C>, g : F1<B, D>) : AbstractEither<C, D> {
+        return fold(
+            new F1Lift(function(l) return left(f.apply(l))), 
+            new F1Lift(function(r) return right(g.apply(r)))
         );
     }
 
-    public inline function fold<T>(f : L -> T, g : R -> T) : T {
-        return this.cata({
-            Left: f,
-            Right: g
-        });
+    public function swap() : AbstractEither<B, A> return fold(new F1Lift(right), new F1Lift(left));
+
+    public function fold<C>(f : F1<A, C>, g : F1<B, C>) : C return missing();
+
+    public function map<C>(f : F1<B, C>) : AbstractEither<A, C> return missing();
+
+    public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : AbstractEither<A, C> return missing();
+
+    public function native() : EitherNative<A, B> return missing();
+
+    inline public function missing<C>() : C throw "Missing Implementation";
+
+    inline private function left<X, Y>(x : X) : AbstractEither<X, Y> return cast x;
+
+    inline private function right<X, Y>(y : Y) : AbstractEither<X, Y> return cast y;
+}
+
+abstract Either<A, B>(AbstractEither<A, B>) from AbstractEither<A, B> to AbstractEither<A, B> {
+
+    inline function new(x : AbstractEither<A, B>) this = x;
+
+    inline public function bimap<C, D>(f : F1<A, C>, g : F1<B, D>) : Either<C, D> {
+        var x : AbstractEither<A, B> = this;
+        return x.bimap(f, g);
     }
 
-    public inline function chain<T>(f : R -> Either<L, T>) : Either<L, T> {
-        return this.fold(
-            function(x : L) : Either<L, T> return Left(x),
-            f
-        );
+    inline public function swap() : Either<B, A> {
+        var x : AbstractEither<A, B> = this;
+        return x.swap();   
     }
 
-    public inline function map<T>(f : R -> T) : Either<L, T> {
-        return this.chain(function(a : R) : Either<L, T> {
-            return Either.lift(f(a));
-        });
+    inline public function fold<C>(f : F1<A, C>, g : F1<B, C>) : C {
+        var x : AbstractEither<A, B> = this;
+        return x.fold(f, g);
     }
 
-    public inline function ap<T>(a : Either<L, R>) : Either<L, T> {
-        var eit : Either<L, R -> T> = cast this;
-        return eit.chain(function(f : R -> T) : Either<L, T> {
-            return a.map(f);
-        });
+    inline public function map<C>(f : F1<B, C>) : Either<A, C> {
+        var x : AbstractEither<A, B> = this;
+        return x.map(f);
+    }
+
+    inline public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : Either<A, C> {
+        var x : AbstractEither<A, B> = this;
+        return x.flatMap(f);
     }
 
     @:to
-    public function toFunctor() : Functor<R> return new EitherOfFunctor(this);
+    inline public function toEitherNative() : EitherNative<A, B> return EitherNatives.fromEither(this);
 
     @:from
-    public static function unsafeFromFunctor<L, R>(a : Functor<R>) : Either<L, R> return EitherOfFunctor.from(cast a);
-    
-    @:to
-    public function toMonad() : Monad<R> return new EitherOfMonad(this);
-
-    @:from
-    public static function unsafeFromMonad<L, R>(a : Monad<R>) : Either<L, R> return EitherOfMonad.from(cast a);
-
-    @:to
-    public function toApplicative() : Applicative<R> return new EitherOfApplicative(this);
-
-    @:from
-    public static function unsafeFromApplicative<L, R>(a : Applicative<R>) : Either<L, R> return EitherOfApplicative.from(cast a);
-}
-
-private class EitherOfFunctor<L, R> {
-
-    private var x : Either<L, R>;
-
-    public function new(x : Either<L, R>) this.x = x;
-
-    public static inline function from<L, R>(x : EitherOfFunctor<L, R>) : Either<L, R> return x.x;
-
-    public function map<T>(f : R -> T) : Functor<T> {
-        var m : EitherType<L, R> = this.x;
-        var n : Either<L, T> = switch(m) {
-            case Left(a): Left(a);
-            case Right(a): Right(f(a));
-        };
-        return n;
+    inline public static function fromEitherNative<A, B>(x : EitherNative<A, B>) : Either<A, B> {
+        return EitherNatives.toEither(x);
     }
 }
 
-private class EitherOfMonad<L, R> {
+class Left<A, B> extends AbstractEither<A, B> {
 
-    private var x : Either<L, R>;
+    private var x : A;
 
-    public function new(x : Either<L, R>) this.x = x;
-
-    public static inline function from<L, R>(x : EitherOfMonad<L, R>) : Either<L, R> return x.x;
-
-    public function of(v : R) : Monad<R> return Either.lift(v);
-
-    public function map<T>(f : R -> T) : Monad<T> {
-        var m : EitherType<L, R> = this.x;
-        var n : Either<L, T> = switch(m) {
-            case Left(a): Left(a);
-            case Right(a): Right(f(a));
-        };
-        return n;
+    public function new(x : A) {
+        super();
+        this.x = x;
     }
 
-    public function chain<T>(f : R -> Monad<T>) : Monad<T> {
-        var m : EitherType<L, R> = this.x;
-        return switch(m) {
-            case Right(a): f(a);
-            case Left(a): 
-                var n : Either<L, T> = Left(a);
-                n;
-        };
-    }
+    override public function fold<C>(f : F1<A, C>, g : F1<B, C>) : C return f.apply(this.x);
+
+    override public function map<C>(f : F1<B, C>) : AbstractEither<A, C> return new Left(this.x);
+
+    override public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : AbstractEither<A, C> return new Left(this.x);
+
+    override public function native() : EitherNative<A, B> return EitherNative.Left(this.x);
 }
 
-private class EitherOfApplicative<L, R> {
+class Right<A, B> extends AbstractEither<A, B> {
 
-    private var x : Either<L, R>;
+    private var x : B;
 
-    public function new(x : Either<L, R>) this.x = x;
-
-    public static inline function from<L, R>(x : EitherOfApplicative<L, R>) : Either<L, R> return x.x;
-
-    public function of(v : R) : Applicative<R> return Either.lift(v);
-
-    public function ap<T>(a : Applicative<R>) : Applicative<T> {
-        var m : EitherType<L, R> = this.x;
-        return switch(m) {
-            case Left(a): 
-                var n : Either<L, T> = Left(a);
-                n;
-            case Right(f): a.map(function(x) {
-                var g : R -> T = cast f;
-                return g(x);
-            });
-        }
+    public function new(x : B) {
+        super();
+        this.x = x;
     }
 
-    public function map<T>(f : R -> T) : Applicative<T> {
-        var m : EitherType<L, R> = this.x;
-        var n : Either<L, T> = switch(m) {
-            case Left(a): Left(a);
-            case Right(a): Right(f(a));
-        };
-        return n;
+    override public function fold<C>(f : F1<A, C>, g : F1<B, C>) : C return g.apply(this.x);
+
+    override public function map<C>(f : F1<B, C>) : AbstractEither<A, C> return new Right(f.apply(this.x));
+
+    override public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : AbstractEither<A, C> return f.apply(this.x);
+
+    override public function native() : EitherNative<A, B> return EitherNative.Right(this.x);
+}
+
+class EitherOfMonad<L> implements Monad<AbstractEither<L, Dynamic>> {
+
+    public function new() {}
+
+    public function map<A, B>(f : F1<A, B>, fa : _1<AbstractEither<L, Dynamic>, A>) : _1<AbstractEither<L, Dynamic>, B> {
+        var x : AbstractEither<L, A> = cast fa;
+        return cast x.map(f);
+    }
+
+    public function point<A>(a : F0<A>) : _1<AbstractEither<L, Dynamic>, A> {
+        return cast new Right(a.apply());
+    }
+
+    public function flatMap<A, B>(f : F1<A, _1<AbstractEither<L, Dynamic>, B>>, fa : _1<AbstractEither<L, Dynamic>, A>) : _1<AbstractEither<L, Dynamic>, B> {
+        var x : AbstractEither<L, A> = cast fa;
+        return cast x.flatMap(new F1Lift(function(a) {
+            var y : AbstractEither<L, B> = cast f.apply(a);
+            return y;
+        }));
     }
 }
