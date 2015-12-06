@@ -9,10 +9,11 @@ using haxez.F1;
 class CoyonedaExample {
 
     public static function main() {
+        // Coyoneda Fusion
         var a = haxez.Coyoneda.lift(new Seq([1, 2, 3]));
-        var b = a.map(inc.lift());
+        var b = a.map(inc.lift()).map(inc.lift());
 
-        Sys.println(b.run(Seq.functor()));
+        trace(b.run(Seq.functor()));
     }
 
     public static function inc(a : Int) : Int return a + 1;

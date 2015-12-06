@@ -10,7 +10,7 @@ class IdExample {
         var a : Id<Int> = IdNative.Id(1);
         var b : IdNative<Int> = a.map(inc.lift());
 
-        Sys.println(b);
+        trace(b);
     }
 
     public static function inc(a : Int) : Int return a + 1;

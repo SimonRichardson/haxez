@@ -48,7 +48,7 @@ class AbstractEither<A, B> implements _1<AbstractEither<A, Dynamic>, B> {
 
     public function native() : EitherNative<A, B> return missing();
 
-    inline public function missing<C>() : C throw "Missing Implementation";
+    inline private function missing<C>() : C throw "Missing Implementation";
 
     inline private function left<X, Y>(x : X) : AbstractEither<X, Y> return cast x;
 
