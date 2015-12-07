@@ -33,7 +33,7 @@ class AbstractCoyoneda<F, A> implements _1<Coyoneda<F, Dynamic>, A> {
         this.k = k;
     }
 
-    inline public static function functor<G>() : Functor<Coyoneda<G, Dynamic>> {
+    inline public static function functor<G>() : IFunctor<Coyoneda<G, Dynamic>> {
         return new CoyonedaOfFunctor();
     }
 
@@ -45,7 +45,7 @@ class AbstractCoyoneda<F, A> implements _1<Coyoneda<F, Dynamic>, A> {
         return new AbstractCoyoneda(fi, k.andThen(cast f));
     }
 
-    public function run(f : Functor<F>) : _1<F, A> return f.map(this.k, this.fi);
+    public function run(f : IFunctor<F>) : _1<F, A> return f.map(this.k, this.fi);
 
     public function with<X, Y>(f : F2<_1<F, X>, F1<X, A>, Y>) : Y {
         var x : _1<F, X> = cast fi;
@@ -58,7 +58,7 @@ abstract Coyoneda<F, A>(AbstractCoyoneda<F, A>) from AbstractCoyoneda<F, A> to A
 
     inline function new(x : AbstractCoyoneda<F, A>) this = x;
 
-    inline public static function functor<G>() : Functor<Coyoneda<G, Dynamic>> {
+    inline public static function functor<G>() : IFunctor<Coyoneda<G, Dynamic>> {
         return AbstractCoyoneda.functor();
     }
 
@@ -71,7 +71,7 @@ abstract Coyoneda<F, A>(AbstractCoyoneda<F, A>) from AbstractCoyoneda<F, A> to A
         return x.map(f);
     }
 
-    inline public function run(f : Functor<F>) : _1<F, A> {
+    inline public function run(f : IFunctor<F>) : _1<F, A> {
         var x : AbstractCoyoneda<F, A> = this;
         return x.run(f);
     }
@@ -90,7 +90,7 @@ abstract Coyoneda<F, A>(AbstractCoyoneda<F, A>) from AbstractCoyoneda<F, A> to A
     }
 }
 
-class CoyonedaOfFunctor<G> implements Functor<Coyoneda<G, Dynamic>> {
+class CoyonedaOfFunctor<G> implements IFunctor<Coyoneda<G, Dynamic>> {
 
     public function new() {}
 

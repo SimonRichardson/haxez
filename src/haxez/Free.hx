@@ -1,28 +1,35 @@
 package haxez;
 
+import haxez.Coyoneda;
+import haxez.Either;
+import haxez.F0;
 import haxez.F1;
 import haxez.F2;
+import haxez.Functor;
+import haxez.Id;
 import haxez.Monad;
+import haxez.NT;
+import haxez.Option;
 import haxez.T;
 
 enum FreeNative<F, A> {
     Done(a : A);
     Suspend(a : _1<F, AbstractFree<F, A>>);
-    Gosub(a : AbstractFree<F, A>, f : F1<A, AbstractFree<F, B>>);
+    Gosub<B>(a : AbstractFree<F, A>, f : F1<A, AbstractFree<F, B>>);
 }
-typedef FreeCata<F, A, B> = {
-    function Done(a : A) : B;
-    function Suspend(a : _1<F, AbstractFree<F, A>>) : B;
-    function Gosub(a : AbstractFree<F, A>, f : F1<A, AbstractFree<F, B>>);
+typedef FreeCata<F, A, Y> = {
+    function Done(a : A) : Y;
+    function Suspend(a : _1<F, AbstractFree<F, A>>) : Y;
+    function Gosub(a : AbstractFree<F, A>, f : F1<A, AbstractFree<F, Dynamic>>) : Y;
 }
 
 class FreeNatives {
 
-    inline public static function fromFree<F, A>(x : AbstractFree<F, A>) : FreeNative<A, B> {
+    inline public static function fromFree<F, A, B>(x : AbstractFree<F, A>) : FreeNative<F, A> {
         return x.cata({
             Done: function(a) return FreeNative.Done(a),
             Suspend: function(a) return FreeNative.Suspend(a),
-            Gosub: function(a, f) return FreeNative.Gosub(a, f);
+            Gosub: function(a, f) return FreeNative.Gosub(a, f)
         });
     }
 
@@ -30,7 +37,7 @@ class FreeNatives {
         return switch (x) {
             case Done(a): new Done(a);
             case Suspend(a): new Suspend(a);
-            case Gosub(a, f): new Gosub(a, f);
+            case Gosub(a, f): new Gosub(a, cast f);
         };
     }
 }
@@ -40,13 +47,14 @@ class AbstractFree<F, A> implements _1<AbstractFree<F, Dynamic>, A> {
     private function new() {}
 
     @:noUsing
-    inline public static function liftF<G, B>(value : _1<G, B>, g : Functor<G>) : AbstractFree<G, B> {
-        return new Suspend(g.map(function(a) return new Done(a), value));
+    inline public static function liftF<G, B>(value : _1<G, B>, g : IFunctor<G>) : AbstractFree<G, B> {
+        // TODO : Remove the `cast`
+        return new Suspend(g.map(new F1Lift(cast function(a) return new Done(a)), value));
     }
 
     @:noUsing
     inline public static function liftFC<S, B>(s : _1<S, B>) : AbstractFree<Coyoneda<S, Dynamic>, B> {
-        return liftF(Coyoneda.lift(s), Coyoneda.functor());
+        return liftF(haxez.Coyoneda.lift(s), haxez.Coyoneda.functor());
     }
 
     inline public static function done<G, B>(b : B) : AbstractFree<G, B> return new Done(b);
@@ -61,98 +69,120 @@ class AbstractFree<F, A> implements _1<AbstractFree<F, Dynamic>, A> {
     }
 
     inline public static function runFC<S, M, B>(   sa : AbstractFree<Coyoneda<S, Dynamic>, B>, 
-                                                    interpreter : NT<S, M>, 
-                                                    m : Monad<M>
+                                                    interpreter : INaturalTransformation<S, M>, 
+                                                    m : IMonad<M>
                                                     ) : _1<M, B> {
-        return sa.foldMap(new AbstractFreeNT(sa, interpreter, m), Coyoneda.functor(), m);
+        return sa.foldMap(new AbstractFreeNT(sa, interpreter, m), haxez.Coyoneda.functor(), m);
     }
 
-    @:access(haxez.Id.Z)
     inline public static function runFCId<S, B>(    sa : AbstractFree<Coyoneda<S, Dynamic>, B>, 
-                                                    interpreter : NT<S, Id.Z>
+                                                    interpreter : INaturalTransformation<S, haxez.Id.Z>
                                                     ) : B {
-        var id : Id<B> = runFC(sa, interpreter, Id.monad);
+        var id : Id<B> = cast runFC(sa, interpreter, haxez.Id.monad());
         return id.value();
     }
 
-    inline public static function freeMonad<S>(f : Functor<S>) : Monad<AbstractFree<S, Dynamic>> {
+    inline public static function freeMonad<S>(f : IFunctor<S>) : IMonad<AbstractFree<S, Dynamic>> {
         return new FreeOfMonad();
     }
 
-    inline public static function freeCoyonedaMonad<G>() : Monad<AbstractFree<Coyoneda<G, Dynamic>, Dynamic>> {
-        return freeMonad(Coyoneda.functor());
+    inline public static function freeCoyonedaMonad<G>() : IMonad<AbstractFree<Coyoneda<G, Dynamic>, Dynamic>> {
+        return freeMonad(haxez.Coyoneda.functor());
     }
 
-    inline public function resume<X1, X2, F, A>(    current : AbstractFree<F, A>, 
-                                                    f : Functor<F>
-                                                    ) : Either<_1<F, AbstractFree<F, A>>, A> {
+    public function resume<X1, X2, F, A>(   current : AbstractFree<F, A>, 
+                                            f : IFunctor<F>
+                                            ) : Either<_1<F, AbstractFree<F, A>>, A> {
         while(true) {
-            var x = current.native();
-            switch (x) {
-                case Done(a): return Right(a);
-                case Suspend(a): return Left(a);
-                case Gosub(y, g):
-                    switch (y) {
-                        case Done(b): current = g.apply(b);
-                        case Suspend(b): Left(f.map(function(o) return o.flatMap(g), b));
-                        case Gosub(b, h):
+            var x = current.cata({
+                Done: function(a) return new Some(new Right(a)),
+                Suspend: function(a) return new Some(cast new Left(a)),
+                Gosub: function(y, g) {
+                    var z = y.cata({
+                        Done: function(b) {
+                            return new Right(g.apply(b));
+                        },
+                        Suspend: function(b) {
+                            return cast new Left(f.map(new F1Lift(function(o) return o.flatMap(cast g)), cast b));
+                        },
+                        Gosub: function(b, h) {
                             var sub : Gosub<F, X2, X1> = cast y;
-                            current = b.flatMap(function(o) {
-                                return h.apply(o).flatMap(g);
-                            });
+                            return new Right(b.flatMap(new F1Lift(cast function(o) {
+                                return h.apply(o).flatMap(cast g);
+                            })));
+                        }
+                    });
+                    
+                    return switch(z.native()) {
+                        case Left(_): new Some(z);
+                        case Right(a): 
+                            current = a;
+                            new None();
                     }
+                }
+            });
+            
+            switch (x.native()) {
+                case Some(x): return x;
+                case None:
             }
         }
     }
 
-    public function go<A>(  f : F1<_1<F, AbstractFree<F, A>>, AbstractFree<F, A>>, 
-                            g : Functor<F>
-                            ) : A {
+    public function go( f : F1<_1<F, AbstractFree<F, A>>, AbstractFree<F, A>>, 
+                        g : IFunctor<F>
+                        ) : A {
         var current : AbstractFree<F, A> = this;
         while (true) {
-            var either : Either<_1<F, AbstractFree<F, A>>, A> = current.resume(g);
+            var either : Either<_1<F, AbstractFree<F, A>>, A> = current.resumeF(g);
             switch (either.native()) {
-                case Left(a): current = f.apply(a);
+                case Left(a): current = cast f.apply(a);
                 case Right(a): return a;
             }
         }
     }
 
-    public function foldMap<G>(f : NT<F, G>, g : Functor<F>, m : Monad<G>) : _1<G, A> {
-        var either = resume(g);
+    public function foldMap<G>( f : INaturalTransformation<F, G>, 
+                                g : IFunctor<F>, 
+                                m : IMonad<G>
+                                ) : _1<G, A> {
+        var either = resumeF(g);
         return switch (either.native()) {
-            case Left(a):  g.flatMap(function(x) return x.foldMap(f, g, m), f.apply(a));
-            case Right(a): g.point(function() return a);
+            case Left(a):
+                m.flatMap(new F1Lift(cast function(x) {
+                    return x.foldMap(f, g, m);
+                }), f.apply(a));
+            case Right(a): m.point(new F0Lift(cast function() return a));
         };
     }
 
-    public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : B return missing();
-
-    public function map<B>(f : F1<A, B>) : AbstractFree<F, B> {
-        return flatMap(function(a) return new Done(f.apply(a)));
+    public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : AbstractFree<F, B> {
+        return Util.missing();
     }
 
-    public function resume(f : Functor<F>) : Either<_1<F, AbstractFree<F, A>>, A> {
+    public function map<B>(f : F1<A, B>) : AbstractFree<F, B> {
+        return flatMap(new F1Lift(cast function(a) return new Done(f.apply(a))));
+    }
+
+    public function resumeF(f : IFunctor<F>) : Either<_1<F, AbstractFree<F, A>>, A> {
         return resume(this, f);
     }
 
-    public function cata<B>(cat : FreeCata<F, A, B>) : B return missing();
+    public function cata<X>(cat : FreeCata<F, A, Dynamic>) : X return Util.missing();
 
-    public function native() : FreeNative<F, A> return missing();
-
-    inline private function missing<C>() : C throw "Missing Implementation";
+    public function native() : FreeNative<F, A> return Util.missing();
 }
 
 @:allow(haxez.AbstractFree)
-private class AbstractFreeNT<S, M, B> implements NT<Coyoneda<S, Dynamic>, M> {
+private class AbstractFreeNT<S, M, B> implements INaturalTransformation<Coyoneda<S, Dynamic>, M> {
 
     private var sa : AbstractFree<Coyoneda<S, Dynamic>, B>;
-    private var interpreter : NT<S, M>;
-    private var m : Monad<M>;
+    private var interpreter : INaturalTransformation<S, M>;
+    private var m : IMonad<M>;
 
     public function new(    sa : AbstractFree<Coyoneda<S, Dynamic>, B>, 
-                            interpreter : NT<S, M>, 
-                            m : Monad<M>
+                            interpreter : INaturalTransformation<S, M>, 
+                            m : IMonad<M>
                             ) {
         this.sa = sa;
         this.interpreter = interpreter;
@@ -161,9 +191,26 @@ private class AbstractFreeNT<S, M, B> implements NT<Coyoneda<S, Dynamic>, M> {
 
     public function apply<A>(cy : _1<Coyoneda<S, Dynamic>, A>) : _1<M, A> {
         var x : Coyoneda<S, A> = cast cy;
-        return x.with(function(fi, k) {
-            return this.m.map(k, interpreter.apply(fi));
-        });
+        return x.with(new F2Lift(function(fi, k) {
+            return m.map(k, interpreter.apply(fi));
+        }));
+    }
+}
+
+private class FreeOfMonad<S> extends Monad<Free<S, Dynamic>> {
+
+    public function new() super();
+
+    override public function point<A>(a : F0<A>) : _1<Free<S, Dynamic>, A> {
+        return AbstractFree.done(a.apply());
+    }
+
+    override public function flatMap<A, B>( f : F1<A, _1<Free<S, Dynamic>, B>>, 
+                                            fa : _1<Free<S, Dynamic>, A>
+                                            ) : _1<Free<S, Dynamic>, B> {
+        return cast AbstractFree.narrow(fa).flatMap(new F1Lift(function(a) {
+            return AbstractFree.narrow(f.apply(a));
+        }));
     }
 }
 
@@ -172,7 +219,7 @@ abstract Free<F, A>(AbstractFree<F, A>) from AbstractFree<F, A> to AbstractFree<
     inline function new(x : AbstractFree<F, A>) this = x;
 
     @:noUsing
-    inline public static function liftF<G, B>(value : _1<G, B>, g : Functor<G>) : Free<G, B> {
+    inline public static function liftF<G, B>(value : _1<G, B>, g : IFunctor<G>) : Free<G, B> {
         return AbstractFree.liftF(value, g);
     }
 
@@ -192,49 +239,50 @@ abstract Free<F, A>(AbstractFree<F, A>) from AbstractFree<F, A> to AbstractFree<
     }
 
     inline public static function runFC<S, M, B>(   sa : Free<Coyoneda<S, Dynamic>, B>, 
-                                                    interpreter : NT<S, M>, 
-                                                    m : Monad<M>
+                                                    interpreter : INaturalTransformation<S, M>, 
+                                                    m : IMonad<M>
                                                     ) : _1<M, B> {
         return AbstractFree.runFC(sa, interpreter, m);
     }
 
     @:access(haxez.Id.Z)
     inline public static function runFCId<S, B>(    sa : Free<Coyoneda<S, Dynamic>, B>, 
-                                                    interpreter : NT<S, Id.Z>
+                                                    interpreter : INaturalTransformation<S, Id.Z>
                                                     ) : B {
         return AbstractFree.runFCId(sa, interpreter);
     }
 
-    inline public static function freeMonad<S>(f : Functor<S>) : Monad<Free<S, Dynamic>> {
-        return AbstractFree.freeMonad();
+    inline public static function freeMonad<S>(f : IFunctor<S>) : IMonad<Free<S, Dynamic>> {
+        return AbstractFree.freeMonad(f);
     }
 
-    inline public static function freeCoyonedaMonad<G>() : Monad<Free<Coyoneda<G, Dynamic>, Dynamic>> {
+    inline public static function freeCoyonedaMonad<G>() : IMonad<Free<Coyoneda<G, Dynamic>, Dynamic>> {
         return AbstractFree.freeCoyonedaMonad();
     }
 
     inline public function resume<X1, X2, F, A>(    current : Free<F, A>, 
-                                                    f : Functor<F>
+                                                    f : IFunctor<F>
                                                     ) : Either<_1<F, Free<F, A>>, A> {
-        return AbstractFree.resume();
+        var x : AbstractFree<F, A> = this;
+        return x.resume(current, f);
     }
 
     public function go<A>(  f : F1<_1<F, AbstractFree<F, A>>, AbstractFree<F, A>>, 
-                            g : Functor<F>
+                            g : IFunctor<F>
                             ) : A {
         var x : AbstractFree<F, A> = this;
         return x.go(f, g);
     }
 
-    public function foldMap<G>( f : NT<F, G>, 
-                                g : Functor<F>, 
-                                m : Monad<G>
+    public function foldMap<G>( f : INaturalTransformation<F, G>, 
+                                g : IFunctor<F>, 
+                                m : IMonad<G>
                                 ) : _1<G, A> {
         var x : AbstractFree<F, A> = this;
-        return x.foldMap(f, g);
+        return x.foldMap(f, g, m);
     }
 
-    public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : B {
+    public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : AbstractFree<F, B> {
         var x : AbstractFree<F, A> = this;
         return x.flatMap(f);
     }
@@ -244,12 +292,12 @@ abstract Free<F, A>(AbstractFree<F, A>) from AbstractFree<F, A> to AbstractFree<
         return x.map(f);
     }
 
-    public function resume(f : Functor<F>) : Either<_1<F, AbstractFree<F, A>>, A> {
+    public function resumeF(f : IFunctor<F>) : Either<_1<F, AbstractFree<F, A>>, A> {
         var x : AbstractFree<F, A> = this;
-        return x.resume(f);
+        return x.resumeF(f);
     }
 
-    public function cata<B>(cat : FreeCata<F, A, B>) : B {
+    public function cata<X>(cat : FreeCata<F, A, Dynamic>) : X {
         var x : AbstractFree<F, A> = this;
         return x.cata(cat);
     }
@@ -272,9 +320,9 @@ class Done<F, A> extends AbstractFree<F, A> {
         this.x = x;
     }
 
-    override public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : AbstractFree<F, B> return new Done(this.x);
+    override public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : AbstractFree<F, B> return new Gosub(this, f);
 
-    override public function cata<B>(cat : FreeCata<F, A, B>) : B return cat.Done(this.x);
+    override public function cata<X>(cat : FreeCata<F, A, Dynamic>) : X return cat.Done(this.x);
 
     override public function native() : FreeNative<F, A> return FreeNative.Done(this.x);
 }
@@ -290,7 +338,7 @@ class Suspend<F, A> extends AbstractFree<F, A> {
 
     override public function flatMap<B>(f : F1<A, AbstractFree<F, B>>) : AbstractFree<F, B> return new Gosub(this, f);
 
-    override public function cata<B>(cat : FreeCata<F, A, B>) : B return cat.Suspend(this.x);
+    override public function cata<X>(cat : FreeCata<F, A, Dynamic>) : X return cat.Suspend(this.x);
 
     override public function native() : FreeNative<F, A> return FreeNative.Suspend(this.x);
 }
@@ -307,10 +355,10 @@ class Gosub<F, A, B> extends AbstractFree<F, B> {
     }
 
     override public function flatMap<C>(f : F1<B, AbstractFree<F, C>>) : AbstractFree<F, C> {
-        return new Gosub(this.x, function(a) return new Gosub(this.y.apply(a), f));
+        return new Gosub(this.x, new F1Lift(cast function(a) return new Gosub(this.y.apply(a), f)));
     }
 
-    override public function cata<B>(cat : FreeCata<F, A, B>) : B return cat.Gosub(this.x, this.y);
+    override public function cata<X>(cat : FreeCata<F, B, Dynamic>) : X return cat.Gosub(cast this.x, cast this.y);
 
-    override public function native() : FreeNative<F, A> return FreeNative.Gosub(this.x, this.y);
+    override public function native() : FreeNative<F, B> return FreeNative.Gosub(cast this.x, cast this.y);
 }

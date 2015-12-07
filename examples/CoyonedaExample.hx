@@ -25,7 +25,7 @@ class Seq<A> implements _1<A, A> {
 
     public function new(a : Array<A>) this.a = a;
 
-    inline public static function functor<Z>() : Functor<Z> return new SeqOfFunctor<Z>();
+    inline public static function functor<Z>() : IFunctor<Z> return new SeqOfFunctor<Z>();
 
     @:arrayAccess
     public function get(x : Int) : A return a[x];
@@ -43,7 +43,7 @@ class Seq<A> implements _1<A, A> {
     };
 }
 
-class SeqOfFunctor<T> implements Functor<T> {
+class SeqOfFunctor<T> implements IFunctor<T> {
 
     public function new() {}
 

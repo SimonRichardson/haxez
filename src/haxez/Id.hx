@@ -21,8 +21,7 @@ class IdNatives {
     }
 }
 
-@:allow(haxez.AbstractId)
-private class Z {}
+class Z {}
 
 @:allow(haxez.IdNatives.fromId)
 class AbstractId<A> implements _1<Z, A> {
@@ -33,7 +32,7 @@ class AbstractId<A> implements _1<Z, A> {
         this.val = value;
     }
 
-    inline public static function monad() : Monad<Z> return new IdOfMonad<Z>();
+    inline public static function monad() : IMonad<Z> return new IdOfMonad<Z>();
 
     public function map<B>(f : F1<A, B>) : AbstractId<B> return new AbstractId(f.apply(this.val));
 
@@ -47,6 +46,8 @@ class AbstractId<A> implements _1<Z, A> {
 abstract Id<A>(AbstractId<A>) from AbstractId<A> to AbstractId<A> {
 
     inline function new(x : AbstractId<A>) this = x;
+
+    inline public static function monad() : IMonad<Z> return AbstractId.monad();
 
     inline public function map<B>(f : F1<A, B>) : Id<B> {
         var x : AbstractId<A> = this;
@@ -72,20 +73,22 @@ abstract Id<A>(AbstractId<A>) from AbstractId<A> to AbstractId<A> {
     }
 }
 
-class IdOfMonad<T> implements Monad<T> {
+class IdOfMonad<T> extends Monad<T> {
 
-    public function new() {}
+    public function new() {
+        super();
+    }
 
-    public function map<A, B>(f : F1<A, B>, fa : _1<T, A>) : _1<T, B> {
+    override public function map<A, B>(f : F1<A, B>, fa : _1<T, A>) : _1<T, B> {
         var x : AbstractId<A> = cast fa;
         return cast x.map(f);
     }
 
-    public function point<A>(a : F0<A>) : _1<T, A> {
+    override public function point<A>(a : F0<A>) : _1<T, A> {
         return cast new AbstractId(a.apply());
     }
 
-    public function flatMap<A, B>(f : F1<A, _1<T, B>>, fa : _1<T, A>) : _1<T, B> {
+    override public function flatMap<A, B>(f : F1<A, _1<T, B>>, fa : _1<T, A>) : _1<T, B> {
         var x : AbstractId<A> = cast fa;
         return cast x.flatMap(new F1Lift(function(a) {
             var y : AbstractId<B> = cast f.apply(a);

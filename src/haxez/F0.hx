@@ -11,9 +11,11 @@ interface F0<A> extends _1<F0z, A> {
     public function apply() : A;
 
     public function map<B>(f : F1<A, B>) : F0<B>;
+
+    public function flatMap<B>(f : F1<A, F0<B>>) : F0<B>;
 }
 
-class F0_<A> implements _1<F0z, A> {
+class F0_<A> implements _1<F0z, A> implements F0<A> {
 
     private var f : F0<A>;
 
@@ -25,16 +27,20 @@ class F0_<A> implements _1<F0z, A> {
         return new F0_<A>(new F0Lift<A>(f));
     }
 
-    inline public static function functor() : Functor<F0z> return new F0OfFunctor();
+    inline public static function functor() : IFunctor<F0z> return new F0OfFunctor();
 
     public function map<B>(f : F1<A, B>) : F0<B> {
         return new F0Lift(function() return f.apply(this.apply()));
     }
 
+    public function flatMap<B>(f : F1<A, F0<B>>) : F0<B> {
+        return new F0Lift(function() return f.apply(this.apply()).apply());
+    }
+
     public function apply() : A return f.apply();
 }
 
-private class F0OfFunctor implements Functor<F0z> {
+private class F0OfFunctor implements IFunctor<F0z> {
 
     public function new() {}
 
@@ -44,15 +50,14 @@ private class F0OfFunctor implements Functor<F0z> {
     }
 }
 
-class F0Lift<A> implements F0<A> {
+class F0Lift<A> extends F0_<A> {
 
-    private var f : Void -> A;
+    private var g : Void -> A;
 
-    public function new(f : Void -> A) this.f = f;
-
-    public function apply() : A return f();
-
-    public function map<B>(f : F1<A, B>) : F0<B> {
-        return new F0Lift(function() return f.apply(apply()));
+    public function new(f : Void -> A) {
+        this.g = f;
+        super(this);
     }
+
+    override public function apply() : A return g();
 }
