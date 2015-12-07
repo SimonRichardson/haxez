@@ -1,6 +1,7 @@
 package haxez;
 
 import haxez.F1;
+import haxez.F2;
 import haxez.Functor;
 import haxez.T;
 
@@ -46,7 +47,7 @@ class AbstractCoyoneda<F, A> implements _1<Coyoneda<F, Dynamic>, A> {
 
     public function run(f : Functor<F>) : _1<F, A> return f.map(this.k, this.fi);
 
-    public function with<X, Y>(f : F2<_1<F, X>, F1<X, A>>) : Y {
+    public function with<X, Y>(f : F2<_1<F, X>, F1<X, A>, Y>) : Y {
         var x : _1<F, X> = cast fi;
         var y : F1<X, A> = cast k;
         return f.apply(x, y);
@@ -75,7 +76,7 @@ abstract Coyoneda<F, A>(AbstractCoyoneda<F, A>) from AbstractCoyoneda<F, A> to A
         return x.run(f);
     }
 
-    inline public function with<X, Y>(f : F2<_1<F, X>, F1<X, A>>) : Y {
+    inline public function with<X, Y>(f : F2<_1<F, X>, F1<X, A>, Y>) : Y {
         var x : AbstractCoyoneda<F, A> = this;
         return x.with(f);
     }

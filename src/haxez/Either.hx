@@ -5,6 +5,10 @@ import haxez.Monad;
 import haxez.T;
 
 typedef EitherNative<L, R> = haxe.ds.Either<L, R>;
+typedef EitherCata<L, R, B> = {
+    function Left(a : L) : B;
+    function Right(a : R) : B;
+}
 
 class EitherNatives {
 
@@ -46,6 +50,8 @@ class AbstractEither<A, B> implements _1<AbstractEither<A, Dynamic>, B> {
 
     public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : AbstractEither<A, C> return missing();
 
+    public function cata<C>(cat : FreeEither<A, B>) : C return missing();
+
     public function native() : EitherNative<A, B> return missing();
 
     inline private function missing<C>() : C throw "Missing Implementation";
@@ -84,6 +90,11 @@ abstract Either<A, B>(AbstractEither<A, B>) from AbstractEither<A, B> to Abstrac
         return x.flatMap(f);
     }
 
+    inline public function cata<C>(cat : EitherCata<A, B>) : C {
+        var x : AbstractEither<A, B> = this;
+        return x.cata(cat);
+    }
+
     @:to
     inline public function toEitherNative() : EitherNative<A, B> return EitherNatives.fromEither(this);
 
@@ -108,6 +119,8 @@ class Left<A, B> extends AbstractEither<A, B> {
 
     override public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : AbstractEither<A, C> return new Left(this.x);
 
+    override public function cata<C>(cat : EitherCata<A, B>) : C return cat.Left(this.x);
+
     override public function native() : EitherNative<A, B> return EitherNative.Left(this.x);
 }
 
@@ -125,6 +138,8 @@ class Right<A, B> extends AbstractEither<A, B> {
     override public function map<C>(f : F1<B, C>) : AbstractEither<A, C> return new Right(f.apply(this.x));
 
     override public function flatMap<C>(f : F1<B, AbstractEither<A, C>>) : AbstractEither<A, C> return f.apply(this.x);
+
+    override public function cata<C>(cat : EitherCata<A, B>) : C return cat.Right(this.x);
 
     override public function native() : EitherNative<A, B> return EitherNative.Right(this.x);
 }
