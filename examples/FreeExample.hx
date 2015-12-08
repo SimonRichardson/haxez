@@ -22,7 +22,7 @@ class FreeExample {
         var either : Either<HttpError, String> = cast Free.runFC(Http.files(), Http.interpreter(), Either.monad());
         switch(either.native()) {
             case Left(error): trace(error.code, error.url);
-            case Right(result): trace(result);
+            case Right(result): trace(">", result);
         };
     }
 }
@@ -46,7 +46,6 @@ class Http<A> implements _1<Z, A> {
     }
 
     inline public static function get<F>(url : String) : Free<Coyoneda<Z, Dynamic>, String> {
-        trace("get", url);
         return Free.liftFC(new Get(url, F1_.id()));
     }
 
@@ -84,7 +83,6 @@ class HttpInterpreterNT implements INaturalTransformation<Z, Either<HttpError, D
     public function new() {}
 
     public function apply<A>(fa : _1<Z, A>) : _1<Either<HttpError, Dynamic>, A> {
-        trace("NT");
         var http : Http<A> = cast fa;
         var request : HttpMethod = http.cata({
             Get: function(url, action) return HttpMethod.Get(url),
@@ -174,8 +172,6 @@ class HttpClient {
             case Get(url): url;
             case Post(url): url;
         };
-
-        trace(url);
 
         var response = new HttpResponse(url, 0, "");
         
