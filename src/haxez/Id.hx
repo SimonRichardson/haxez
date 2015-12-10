@@ -1,139 +1,105 @@
 package haxez;
 
-import haxez.Combinators as C;
-import haxez.Types;
+import haxez.F1;
+import haxez.Functor;
+import haxez.Monad;
+import haxez.T;
 
-using haxez.Id;
-
-enum IdType<T> {
-    IdType(a : T);
+enum IdNative<T> {
+    Id(x : T);
 }
 
-abstract Id<T>(IdType<T>) from IdType<T> to IdType<T> {
+class IdNatives {
 
-    public inline function new(id : IdType<T>) {
-        this = id;
+    inline public static function fromId<A>(x : AbstractId<A>) : IdNative<A> {
+        return IdNative.Id(x.val);
     }
 
-    @:noUsing
-    public static inline function lift<T>(v : T) : Id<T> return IdType(v);
-
-    public function of(v : T) : Id<T> return Id.lift(v);
-
-    public inline function run() : T {
-        return switch(this) {
-            case IdType(a): a;
+    inline public static function toId<A>(x : IdNative<A>) : AbstractId<A> {
+        return switch(x) {
+            case Id(a): new AbstractId(a);
         };
     }
+}
 
-    public inline function chain<A>(f : T -> Id<A>) : Id<A> {
-        return switch(this) {
-            case IdType(a): f(a);
-        };
+class Z {}
+
+@:allow(haxez.IdNatives.fromId)
+class AbstractId<A> implements _1<Z, A> {
+
+    private var val : A;
+
+    public function new(value : A) {
+        this.val = value;
     }
 
-    public inline function map<A>(f : T -> A) : Id<A> {
-        return this.chain(function(a : T) : Id<A> {
-            return Id.lift(f(a));
-        });
+    inline public static function functor() : IFunctor<Z> return new IdOfFunctor<Z>();
+
+    inline public static function monad() : IMonad<Z> return new IdOfMonad<Z>();
+
+    public function map<B>(f : F1<A, B>) : AbstractId<B> return new AbstractId(f.apply(this.val));
+
+    public function flatMap<B>(f : F1<A, AbstractId<B>>) : AbstractId<B> return f.apply(this.val);
+
+    public function native() : IdNative<A> return IdNative.Id(this.val);
+
+    public function value() : A return this.val;
+}
+
+abstract Id<A>(AbstractId<A>) from AbstractId<A> to AbstractId<A> {
+
+    inline function new(x : AbstractId<A>) this = x;
+
+    inline public static function functor() : IFunctor<Z> return AbstractId.functor();
+
+    inline public static function monad() : IMonad<Z> return AbstractId.monad();
+
+    inline public function map<B>(f : F1<A, B>) : Id<B> {
+        var x : AbstractId<A> = this;
+        return x.map(f);
     }
 
-    public inline function ap<A>(a : Id<T>) : Id<A> {
-        var id : Id<T -> A> = cast this;
-        return id.chain(function(f : T -> A) : Id<A> {
-            return a.map(f);
-        });
+    inline public function flatMap<B>(f : F1<A, AbstractId<B>>) : Id<B> {
+        var x : AbstractId<A> = this;
+        return x.flatMap(f);
+    }
+
+    inline public function value() : A {
+        var x : AbstractId<A> = this;
+        return x.value();
     }
 
     @:to
-    public function toFunctor() : Functor<T> return new IdOfFunctor(this);
+    inline public function toIdNative() : IdNative<A> return IdNatives.fromId(this);
 
     @:from
-    public static function unsafeFromFunctor<T>(a : Functor<T>) : Id<T> return IdOfFunctor.from(cast a);
-
-    @:to
-    public function toMonad() : Monad<T> return new IdOfMonad(this);
-
-    @:from
-    public static function unsafeFromMonad<T>(a : Monad<T>) : Id<T> return IdOfMonad.from(cast a);
-    
-    @:to
-    public function toApplicative() : Applicative<T> return new IdOfApplicative(this);
-
-    @:from
-    public static function unsafeFromApplicative<T>(a : Applicative<T>) : Id<T> return IdOfApplicative.from(cast a);
-}
-
-private class IdOfFunctor<T> {
-
-    private var x : Id<T>;
-
-    public function new(x : Id<T>) this.x = x;
-
-    public static inline function from<T>(x : IdOfFunctor<T>) : Id<T> return x.x;
-
-    public function map<A>(f : T -> A) : Functor<A> {
-        var m : IdType<T> = this.x;
-        var n : Id<A> = switch(m) {
-            case IdType(a): IdType(f(a));
-        };
-        return n;
+    inline public static function fromIdNative<A>(x : IdNative<A>) : Id<A> {
+        return IdNatives.toId(x);
     }
 }
 
-private class IdOfMonad<T> {
+class IdOfFunctor<T> extends Functor<T> {
 
-    private var x : Id<T>;
+    public function new() super();
 
-    public function new(x : Id<T>) this.x = x;
-
-    public static inline function from<T>(x : IdOfMonad<T>) : Id<T> return x.x;
-
-    public function of(v : T) : Monad<T> return Id.lift(v);
-
-    public function map<A>(f : T -> A) : Monad<A> {
-        var m : IdType<T> = this.x;
-        var n : Id<A> = switch(m) {
-            case IdType(a): IdType(f(a));
-        };
-        return n;
-    }
-
-    public function chain<A>(f : T -> Monad<A>) : Monad<A> {
-        var m : IdType<T> = this.x;
-        var n : Id<A> = switch(m) {
-            case IdType(a): f(a);
-        };
-        return n;
+    override public function map<A, B>(f : F1<A, B>, fa : _1<T, A>) : _1<T, B> {
+        return cast (cast(fa, AbstractId<Dynamic>)).map(f);
     }
 }
 
-private class IdOfApplicative<T> {
+class IdOfMonad<T> extends Monad<T> {
 
-    private var x : Id<T>;
+    public function new() super();
 
-    public function new(x : Id<T>) this.x = x;
-
-    public static inline function from<T>(x : IdOfApplicative<T>) : Id<T> return x.x;
-
-    public function of(v : T) : Applicative<T> return Id.lift(v);
-
-    public function ap<A>(a : Applicative<T>) : Applicative<A> {
-        var m : IdType<T> = this.x;
-        var n : Id<A> = a.map(function(x) {
-            var g : T -> A = cast switch(m) {
-                case IdType(a): a;
-            };
-            return g(x);
-        });
-        return n;
+    override public function point<A>(a : F0<A>) : _1<T, A> {
+        return cast new AbstractId(a.apply());
     }
 
-    public function map<A>(f : T -> A) : Applicative<A> {
-        var m : IdType<T> = this.x;
-        var n : Id<A> = switch(m) {
-            case IdType(a): IdType(f(a));
-        };
-        return n;
+    override public function flatMap<A, B>(f : F1<A, _1<T, B>>, fa : _1<T, A>) : _1<T, B> {
+        var x : AbstractId<A> = cast fa;
+        return cast x.flatMap(new F1Lift(function(a) {
+            var y : AbstractId<B> = cast f.apply(a);
+            return y;
+        }));
     }
 }
