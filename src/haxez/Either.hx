@@ -32,8 +32,8 @@ class AbstractEither<A, B> implements _1<AbstractEither<A, Dynamic>, B> {
 
     private function new() {}
 
-    inline public static function monad<L>() : IMonad<AbstractEither<L, Dynamic>> {
-        return new EitherOfMonad<L>();
+    inline public static function monad<L>() : IMonad<Either<L, Dynamic>> {
+        return cast new EitherOfMonad<Either<L, Dynamic>>();
     }
 
     public function bimap<C, D>(f : F1<A, C>, g : F1<B, D>) : AbstractEither<C, D> {
@@ -64,9 +64,7 @@ abstract Either<A, B>(AbstractEither<A, B>) from AbstractEither<A, B> to Abstrac
 
     inline function new(x : AbstractEither<A, B>) this = x;
 
-    inline public static function monad<L>() : IMonad<AbstractEither<L, Dynamic>> {
-        return AbstractEither.monad();
-    }
+    inline public static function monad<L>() : IMonad<Either<L, Dynamic>> return AbstractEither.monad();
 
     inline public function bimap<C, D>(f : F1<A, C>, g : F1<B, D>) : Either<C, D> {
         var x : AbstractEither<A, B> = this;
@@ -152,40 +150,16 @@ class Right<A, B> extends AbstractEither<A, B> {
     override public function native() : EitherNative<A, B> return EitherNative.Right(this.x);
 }
 
-class EitherOfMonad<F> implements IMonad<AbstractEither<F, Dynamic>> {
+class EitherOfMonad<T> extends Monad<Either<T, Dynamic>> {
 
-    public function new() {}
+    public function new() super();
 
-    public function ap<A, B>(   f : F0<_1<AbstractEither<F, Dynamic>, F1<A, B>>>, 
-                                fa : F0<_1<AbstractEither<F, Dynamic>, A>>
-                                ) : _1<AbstractEither<F, Dynamic>, B> {
-        return cast flatMap(new F1Lift(function(x) {
-            return map(x, cast fa.apply());
-        }), cast f.apply());
-    }
-
-    public function apply2<A1, A2, Z>(  a : F0<_1<AbstractEither<F, Dynamic>, A1>>, 
-                                        b : F0<_1<AbstractEither<F, Dynamic>, A2>>, 
-                                        f : F2<A1, A2, Z>
-                                        ) : _1<AbstractEither<F, Dynamic>, Z> {
-        return Util.missing();
-    }
-
-    public function map<A, B>(  f : F1<A, B>, 
-                                fa : _1<AbstractEither<F, Dynamic>, A>
-                                ) : _1<AbstractEither<F, Dynamic>, B> {
-        var x : AbstractEither<F, A> = cast fa;
-        return cast x.map(f);
-    }
-
-    public function point<A>(a : F0<A>) : _1<AbstractEither<F, Dynamic>, A> {
+    override public function point<A>(a : F0<A>) : _1<Either<T, Dynamic>, A> {
         return cast new Right(a.apply());
     }
 
-    public function flatMap<A, B>(  f : F1<A, _1<AbstractEither<F, Dynamic>, B>>, 
-                                    fa : _1<AbstractEither<F, Dynamic>, A>
-                                    ) : _1<AbstractEither<F, Dynamic>, B> {
-        var x : AbstractEither<F, A> = cast fa;
+    override public function flatMap<A, B>(f : F1<A, _1<Either<T, Dynamic>, B>>, fa : _1<Either<T, Dynamic>, A>) : _1<Either<T, Dynamic>, B> {
+        var x : AbstractEither<Either<T, Dynamic>, A> = cast fa;
         return cast x.flatMap(new F1Lift(function(a) {
             return cast f.apply(a);
         }));

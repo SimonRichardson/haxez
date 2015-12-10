@@ -23,9 +23,7 @@ class F0_<A> implements _1<F0z, A> implements F0<A> {
         this.f = f;
     }
 
-    inline public static function lift<A>(f : Void -> A) : F0_<A> {
-        return new F0_<A>(new F0Lift<A>(f));
-    }
+    inline public static function lift<A>(f : Void -> A) : F0_<A> return new F0Lift<A>(f);
 
     inline public static function functor() : IFunctor<F0z> return new F0OfFunctor();
 

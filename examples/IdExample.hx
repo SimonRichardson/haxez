@@ -1,5 +1,6 @@
 package examples;
 
+import haxez.Functor;
 import haxez.Id;
 
 using haxez.F1;
@@ -10,7 +11,10 @@ class IdExample {
         var a : Id<Int> = IdNative.Id(1);
         var b : IdNative<Int> = a.map(inc.lift());
 
-        trace(b);
+        var f = haxez.Id.functor();
+        var c = f.map(inc.lift(), a);
+
+        trace(b, c);
     }
 
     public static function inc(a : Int) : Int return a + 1;

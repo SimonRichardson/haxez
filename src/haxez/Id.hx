@@ -1,6 +1,7 @@
 package haxez;
 
 import haxez.F1;
+import haxez.Functor;
 import haxez.Monad;
 import haxez.T;
 
@@ -32,6 +33,8 @@ class AbstractId<A> implements _1<Z, A> {
         this.val = value;
     }
 
+    inline public static function functor() : IFunctor<Z> return new IdOfFunctor<Z>();
+
     inline public static function monad() : IMonad<Z> return new IdOfMonad<Z>();
 
     public function map<B>(f : F1<A, B>) : AbstractId<B> return new AbstractId(f.apply(this.val));
@@ -46,6 +49,8 @@ class AbstractId<A> implements _1<Z, A> {
 abstract Id<A>(AbstractId<A>) from AbstractId<A> to AbstractId<A> {
 
     inline function new(x : AbstractId<A>) this = x;
+
+    inline public static function functor() : IFunctor<Z> return AbstractId.functor();
 
     inline public static function monad() : IMonad<Z> return AbstractId.monad();
 
@@ -73,16 +78,18 @@ abstract Id<A>(AbstractId<A>) from AbstractId<A> to AbstractId<A> {
     }
 }
 
-class IdOfMonad<T> extends Monad<T> {
+class IdOfFunctor<T> extends Functor<T> {
 
-    public function new() {
-        super();
-    }
+    public function new() super();
 
     override public function map<A, B>(f : F1<A, B>, fa : _1<T, A>) : _1<T, B> {
-        var x : AbstractId<A> = cast fa;
-        return cast x.map(f);
+        return cast (cast(fa, AbstractId<Dynamic>)).map(f);
     }
+}
+
+class IdOfMonad<T> extends Monad<T> {
+
+    public function new() super();
 
     override public function point<A>(a : F0<A>) : _1<T, A> {
         return cast new AbstractId(a.apply());
